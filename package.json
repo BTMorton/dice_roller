@@ -1,0 +1,27 @@
+{
+  "name": "dice_roller",
+  "version": "1.0.0",
+  "description": "A javascript dice roller in the style of roll20",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BTMorton/dice_roller.git"
+  },
+  "keywords": [
+    "roll20",
+    "dice",
+    "roller"
+  ],
+  "author": "Ben Morton <ben.morton91@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/BTMorton/dice_roller/issues"
+  },
+  "homepage": "https://github.com/BTMorton/dice_roller#readme",
+  "dependencies": {
+    "rd-parse": "0.0.1"
+  }
+}

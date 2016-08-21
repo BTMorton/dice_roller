@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "noImplicitAny": false,
+        "sourceMap": false
+    },
+    "exclude": [
+        "node_modules"
+    ],
+    "files": [
+    	"roller.ts",
+    	"typings/index.d.ts"
+    ]
+}
