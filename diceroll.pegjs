@@ -27,7 +27,7 @@
 	}
 }
 
-start = ModGroupedRoll / RollExpression
+start = Expression / RollExpression / ModGroupedRoll
 
 ModGroupedRoll = group:GroupedRoll mods:(GroupSuccessMod / GroupFailureMod / GroupKeepMod / GroupDropMod)* {
 	group.dice = mods.reduce((dice, mod) => {
@@ -394,7 +394,7 @@ IntExpr = int:Integer {
 	}
 }
 
-Expression = BracketExpression / NonExpression;
+Expression = NonExpression / BracketExpression;
 
 BracketExpression = "(" expr:Expression ")" {
 	return expr;
@@ -402,9 +402,9 @@ BracketExpression = "(" expr:Expression ")" {
 
 NonExpression = head:Term tail:(_ ("+" / "-") _ Term)* {
 	const result = tail.reduce(function(result, element) {
-		if (element[1] === "+") { return result + element[3]; }
-		if (element[1] === "-") { return result - element[3]; }
-	}, head);
+		if (element[1] === "+") { return result + element[3].value; }
+		if (element[1] === "-") { return result - element[3].value; }
+	}, head.value);
 	
 	return {
 		type: "expression",
@@ -413,16 +413,27 @@ NonExpression = head:Term tail:(_ ("+" / "-") _ Term)* {
 }
 
 Term = head:Factor tail:(_ ("*" / "/") _ Factor)* {
-	return tail.reduce(function(result, element) {
-		if (element[1] === "*") { return result * element[3]; }
-		if (element[1] === "/") { return result / element[3]; }
-	}, head);
+	const result = tail.reduce(function(result, element) {
+		if (element[1] === "*") { return result * element[3].value; }
+		if (element[1] === "/") { return result / element[3].value; }
+	}, head.value);
+	
+	return {
+		type: "expression",
+		value: result,
+	};
 }
 
 Factor = "(" _ expr:Expression _ ")" { return expr; }
 	/ Integer
 
-Integer "integer" = [0-9]+ { return parseInt(text(), 10); }
+Integer "integer" = [0-9]+ {
+	const num = parseInt(text(), 10);
+	return {
+		type: "number",
+		value: num,
+	}
+}
 
 _ "whitespace"
 	= [ \t\n\r]*

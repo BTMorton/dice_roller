@@ -12,7 +12,6 @@ bot.on("message", processMessage.bind(null));
 bot.login(token);
 
 function processMessage(message) {
-	console.log(message.content, message.content.match(/^\/r(oll)?/i));
 	if (message.author.bot) {
 		return;
 	}
@@ -22,11 +21,11 @@ function processMessage(message) {
 		rollDice(message, diceString);
 	} else {
 		matches = message.content.match(/\[\[[^\]]+\]\]/g);
-		console.log("[[matches]]", matches);
+		
 		if (matches && matches.length > 0) {
 			for (let match of matches) {
 				const diceString = match.slice(2, -2);
-				console.log(diceString, match);
+				
 				rollDice(message, diceString);
 			}
 		}
@@ -41,7 +40,7 @@ function rollDice(message, string) {
 		
 		message.channel.sendMessage(reply);
 	} catch (e) {
-		console.log(e);
+		console.error(e);
 		sendError(message);
 	}
 }
@@ -58,7 +57,7 @@ function render(roll) {
 	} else if (roll.type == "die") {
 		return renderDie(roll);
 	} else if (roll.type == "expression") {
-		return renderExpr(roll);
+		return renderExpression(roll);
 	} else if (roll.type == "roll") {
 		return renderRoll(roll);
 	} else {
