@@ -2,9 +2,10 @@
   "name": "dice_roller",
   "version": "1.0.0",
   "description": "A javascript dice roller in the style of roll20",
-  "main": "index.js",
+  "main": "diceroll.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "pegjs diceroll.pegjs",
+    "postinstall": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -21,7 +22,7 @@
     "url": "https://github.com/BTMorton/dice_roller/issues"
   },
   "homepage": "https://github.com/BTMorton/dice_roller#readme",
-  "dependencies": {
-    "rd-parse": "0.0.1"
+  "devDependencies": {
+    "pegjs": "^0.10.0"
   }
 }
