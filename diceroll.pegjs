@@ -27,7 +27,13 @@
 	}
 }
 
-start = Expression / RollExpression / ModGroupedRoll
+start = expr:Expression .* {
+	expr.type = "root" + expr.type;
+	
+	return expr;
+}
+
+AnyRoll = ModGroupedRoll / FullRoll / Integer
 
 ModGroupedRoll = group:GroupedRoll mods:(GroupSuccessMod / GroupFailureMod / GroupKeepMod / GroupDropMod)* {
 	group.dice = mods.reduce((dice, mod) => {
@@ -104,29 +110,29 @@ GroupDropMod = "d" highlow:("l" / "h")? expr:RollExpr? {
 }
 
 GroupedRoll = "{" _ head:(GroupRollExpression / RollExpression) tail:(_ "," _ (GroupRollExpression / RollExpression))* _ "}" {
-	if (tail.length == 0) {
-		return head;
-	} else {
-		const result = tail.reduce(function(result, element) {
-			return result + element[3].value;
-		}, head.value);
-		
-		head.order = 0;
-		
-		return {
-			dice: [head].concat(tail.map((element, i) => {
-				element[3].order = i + 1;
-				return element[3];
-			})),
-			type: "group",
-			success: false,
-			valid: true,
-			value: result,
-		}
+	const result = tail.reduce(function(result, element) {
+		return result + element[3].value;
+	}, head.value);
+	
+	head.order = 0;
+	
+	return {
+		dice: [head].concat(tail.map((element, i) => {
+			element[3].order = i + 1;
+			return element[3];
+		})),
+		type: "group",
+		success: false,
+		valid: true,
+		value: result,
 	}
 }
 
 GroupRollExpression = head:FullRoll tail:(_ "+" _ FullRoll)* {
+	if (tail.length == 0) {
+		return head;
+	}
+	
 	const result = tail.reduce(function(result, element) {
 		return result + element[3].value;
 	}, head.value);
@@ -146,6 +152,10 @@ GroupRollExpression = head:FullRoll tail:(_ "+" _ FullRoll)* {
 }
 
 RollExpression = head:RollOrExpression tail:(_ ("+"/"-") _ RollOrExpression)* {
+	if (tail.length == 0) {
+		return head;
+	}
+	
 	const result = tail.reduce(function(result, element) {
 		if (element[1] === "+") { return result + element[3].value; }
 		if (element[1] === "-") { return result - element[3].value; }
@@ -378,54 +388,69 @@ DiceRoll = head:RollExpr? tail:("d" RollExpr) {
 	}
 	
 	return {
-		die: tail[1],
+		die: tail[1].value,
 		rolls: rolls,
 		type: "die",
+		valid: true,
 		value: 0,
 	};
 }
 
-RollExpr = BracketExpression / IntExpr;
-
-IntExpr = int:Integer {
-	return {
-		type: "expression",
-		value: int,
-	}
-}
+RollExpr = BracketExpression / Integer;
 
 Expression = NonExpression / BracketExpression;
 
-BracketExpression = "(" expr:Expression ")" {
+BracketExpression = "(" expr:NonExpression ")" {
 	return expr;
 }
 
 NonExpression = head:Term tail:(_ ("+" / "-") _ Term)* {
+	if (tail.length == 0) {
+		return head;
+	}
+	
 	const result = tail.reduce(function(result, element) {
 		if (element[1] === "+") { return result + element[3].value; }
 		if (element[1] === "-") { return result - element[3].value; }
 	}, head.value);
 	
+	head.order = 0;
+	
 	return {
+		dice: [head].concat(tail.map(function(element, i) {
+			element[3].order = i + 1;
+			return element[3];
+		})),
+		ops: tail.map((element) => element[1]),
 		type: "expression",
+		valid: true,
 		value: result,
 	};
 }
 
 Term = head:Factor tail:(_ ("*" / "/") _ Factor)* {
+	if (tail.length == 0) {
+		return head;
+	}
+	
 	const result = tail.reduce(function(result, element) {
 		if (element[1] === "*") { return result * element[3].value; }
 		if (element[1] === "/") { return result / element[3].value; }
 	}, head.value);
 	
 	return {
+		dice: [head].concat(tail.map(function(element, i) {
+			element[3].order = i + 1;
+			return element[3];
+		})),
+		ops: tail.map((element) => element[1]),
 		type: "expression",
+		valid: true,
 		value: result,
 	};
 }
 
-Factor = "(" _ expr:Expression _ ")" { return expr; }
-	/ Integer
+Factor = BracketExpression / AnyRoll
 
 Integer "integer" = [0-9]+ {
 	const num = parseInt(text(), 10);

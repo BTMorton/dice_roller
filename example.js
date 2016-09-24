@@ -2,8 +2,6 @@ const parser = require("./diceroll.js");
 const Discord = require("discord.js");
 const token = process.env.DISCORD_TOKEN;
 
-const groupTypes = ["groupExpression", "diceExpression"];
-
 bot = new Discord.Client();
 bot.on("ready", () => {
 	console.log("Ready to roll! Geddit?");
@@ -24,7 +22,12 @@ function processMessage(message) {
 		
 		if (matches && matches.length > 0) {
 			for (let match of matches) {
-				const diceString = match.slice(2, -2);
+				let diceString = match.slice(2, -2);
+				
+				if (diceString.indexOf(":") >= 0) {
+					const flavour = diceString.slice(0, diceString.indexOf(":")).trim();
+					diceString = diceString.slice(diceString.indexOf(":") + 1).trim() + " " + flavour;
+				}
 				
 				rollDice(message, diceString);
 			}
@@ -50,18 +53,44 @@ function sendError(message) {
 }
 
 function render(roll) {
-	if (groupTypes.indexOf(roll.type) >= 0) {
-		return renderGroupExpr(roll);
-	} else if (roll.type == "group") {
-		return renderGroup(roll);
-	} else if (roll.type == "die") {
-		return renderDie(roll);
-	} else if (roll.type == "expression") {
-		return renderExpression(roll);
-	} else if (roll.type == "roll") {
-		return renderRoll(roll);
+	let render = "";
+	
+	let type = roll.type;
+	
+	if (type.startsWith("root")) {
+		type = type.slice(4);
+	}
+	
+	switch (type) {
+		case "groupExpression":
+		case "diceExpression":
+			render = renderGroupExpr(roll);
+			break;
+		case "group":
+			render = renderGroup(roll);
+			break;
+		case "die":
+			render = renderDie(roll);
+			break;
+		case "expression":
+			render = renderExpression(roll);
+			break;
+		case "roll":
+			return renderRoll(roll);
+		case "number":
+			return roll.value;
+		default:
+			throw new Error("Unable to render");
+	}
+	
+	if (!roll.valid) {
+		render = "~~" + render.replace(/~~/g, "") + "~~";
+	}
+	
+	if (roll.type.startsWith("root")) {
+		return render;
 	} else {
-		throw new Error("Unable to render");
+		return "(" + render + ")";
 	}
 }
 
@@ -96,7 +125,24 @@ function renderDie(die) {
 }
 
 function renderExpression(expr) {
-	return expr.value;
+	if (expr.dice.length > 1) {
+		const expressions = [];
+		
+		for (let i = 0; i < expr.dice.length - 1; i++) {
+			expressions.push(render(expr.dice[i]));
+			expressions.push(expr.ops[i]);
+		}
+		
+		expressions.push(render(expr.dice.slice(-1)[0]));
+		expressions.push("=");
+		expressions.push(expr.value);
+		
+		return expressions.join(" ");
+	} else if (expr.dice[0].type == "number") {
+		return expr.value;
+	} else {
+		return render(expr.dice[0]);
+	}
 }
 
 function renderRoll(roll) {
