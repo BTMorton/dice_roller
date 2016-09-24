@@ -279,7 +279,7 @@ KeepMod = "k" mod:("l" / "h")? expr:RollExpr? {
 	}
 }
 
-RolledModRoll = head:DiceRoll tail:(ExplodeRoll / CompoundRoll / PenetrateRoll / ReRollOnceMod / ReRollMod)* {
+RolledModRoll = head:DiceRoll tail:(CompoundRoll / PenetrateRoll / ExplodeRoll / ReRollOnceMod / ReRollMod)* {
 	head.rolls = tail.reduce((rolls, mod) => {
 		return mod(rolls, head.die);
 	}, head.rolls);
@@ -288,9 +288,9 @@ RolledModRoll = head:DiceRoll tail:(ExplodeRoll / CompoundRoll / PenetrateRoll /
 }
 
 ExplodeRoll = "!" target:TargetMod? {
-	target = target ? target : successTest.bind(null, "=", head.die);
-	
 	return (rolls, die) => {
+		target = target ? target : successTest.bind(null, "=", die.value);
+		
 		for (let i = 0; i < rolls.length; i++) {
 			rolls[i].order = i;
 			
@@ -305,9 +305,9 @@ ExplodeRoll = "!" target:TargetMod? {
 }
 
 CompoundRoll = "!!" target:TargetMod? {
-	target = target ? target : successTest.bind(null, "=", head.die);
-	
 	return (rolls, die) => {
+		target = target ? target : successTest.bind(null, "=", die.value);
+		
 		for (let i = 0; i < rolls.length; i++) {
 			let rollValue = rolls[i].roll;
 			let curValue = rolls[i].roll;
@@ -327,9 +327,9 @@ CompoundRoll = "!!" target:TargetMod? {
 }
 
 PenetrateRoll = "!p" target:TargetMod? {
-	target = target ? target : successTest.bind(null, "=", head.die);
-	
 	return (rolls, die) => {
+		target = target ? target : successTest.bind(null, "=", die.value);
+		
 		for (let i = 0; i < rolls.length; i++) {
 			rolls[i].order = i;
 			
@@ -351,8 +351,9 @@ ReRollMod = "r" target:TargetMod? {
 	return (rolls, die) => {
 		for (let i = 0; i < rolls.length; i++) {
 			while (target(rolls[i].roll)) {
+				rolls[i].valid = false;
 				const newRoll = generateRoll(die.value, i + 1);
-				rolls.splice(i, 1, newRoll);
+				rolls.splice(++i, 0, newRoll);
 			}
 		}
 		
@@ -366,8 +367,9 @@ ReRollOnceMod = "ro" target:TargetMod? {
 	return (rolls, die) => {
 		for (let i = 0; i < rolls.length; i++) {
 			if (target(rolls[i].roll)) {
+				rolls[i].valid = false;
 				const newRoll = generateRoll(die.value, i + 1);
-				rolls.splice(i, 1, newRoll);
+				rolls.splice(++i, 0, newRoll);
 			}
 		}
 		
@@ -388,7 +390,7 @@ DiceRoll = head:RollExpr? tail:("d" RollExpr) {
 	}
 	
 	return {
-		die: tail[1].value,
+		die: tail[1],
 		rolls: rolls,
 		type: "die",
 		valid: true,
