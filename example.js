@@ -13,22 +13,22 @@ function processMessage(message) {
 	if (message.author.bot) {
 		return;
 	}
-	
+
 	if (message.content.match(/^\/r(oll)?/i)) {
 		const diceString = message.content.replace(/^\/r(oll)?/i, "").trim();
 		rollDice(message, diceString);
 	} else {
 		matches = message.content.match(/\[\[[^\]]+\]\]/g);
-		
+
 		if (matches && matches.length > 0) {
 			for (let match of matches) {
 				let diceString = match.slice(2, -2);
-				
+
 				if (diceString.indexOf(":") >= 0) {
 					const flavour = diceString.slice(0, diceString.indexOf(":")).trim();
 					diceString = diceString.slice(diceString.indexOf(":") + 1).trim() + " " + flavour;
 				}
-				
+
 				rollDice(message, diceString);
 			}
 		}
@@ -38,14 +38,45 @@ function processMessage(message) {
 function rollDice(message, string) {
 	try {
 		const roll = parser.parse(string);
-		
-		const reply = string.replace(/\*/g, "\*") + ": " + render(roll);
-		
-		message.channel.sendMessage(reply);
+
+		const reply = string.replace(/\*/g, "\\\*") + ": " + render(roll);
+		const replies = splitReply(reply);
+
+		if (replies.length > 1) {
+			message.channel.sendMessage(string.replace(/\*/g, "\\\*") + " = " + roll.value)
+		} else {
+			sendReplies(message, replies);
+		}
 	} catch (e) {
 		console.error(e);
 		sendError(message);
 	}
+}
+
+function splitReply(reply) {
+	const replies = [ ];
+	const maxLength = 2000;
+
+	while (reply.length > maxLength) {
+		const index = reply.lastIndexOf(" ", maxLength);
+		replies.push(reply.slice(0, index));
+		reply = reply.slice(index + 1);
+	}
+
+	replies.push(reply);
+
+	return replies;
+}
+
+function sendReplies(message, replies) {
+	if (replies.length == 0) return;
+
+	return message.channel.sendMessage(replies.shift()).then((msg) => {
+		return sendReplies(message, replies);
+	}).catch((err) => {
+		message.reply("Sorry, something went wrong trying to post the reply. Please try again.");
+		console.error(err);
+	});
 }
 
 function sendError(message) {
@@ -54,13 +85,13 @@ function sendError(message) {
 
 function render(roll) {
 	let render = "";
-	
+
 	let type = roll.type;
-	
+
 	if (type.startsWith("root")) {
 		type = type.slice(4);
 	}
-	
+
 	switch (type) {
 		case "groupExpression":
 		case "diceExpression":
@@ -86,11 +117,11 @@ function render(roll) {
 		default:
 			throw new Error("Unable to render");
 	}
-	
+
 	if (!roll.valid) {
 		render = "~~" + render.replace(/~~/g, "") + "~~";
 	}
-	
+
 	if (roll.type.startsWith("root")) {
 		return render;
 	} else {
@@ -100,37 +131,37 @@ function render(roll) {
 
 function renderGroup(group) {
 	const replies = [];
-	
+
 	for (let die of group.dice) {
 		replies.push(render(die));
 	}
-	
+
 	return "{ " + replies.join(" + ") + " } = " + group.value;
 }
 
 function renderGroupExpr(group) {
 	const replies = [];
-	
+
 	for (let die of group.dice) {
 		replies.push(render(die));
 	}
-	
+
 	return replies.length > 1 ? "(" + replies.join(" + ") + ") = " + group.value : replies[0];
 }
 
 function renderDie(die) {
 	const replies = [];
-	
+
 	for (let roll of die.rolls) {
 		replies.push(render(roll));
 	}
-	
+
 	let reply = "(" + replies.join(", ") + ")";
-	
+
 	if (!["number", "fate"].includes(die.die.type) || !["number", "fate"].includes(die.count.type)) {
 		reply += "[*Rolling: " + render(die.count) + "d" + render(die.die) + "*]";
 	}
-	
+
 	reply += " = " + die.value;
 	return reply;
 }
@@ -138,16 +169,16 @@ function renderDie(die) {
 function renderExpression(expr) {
 	if (expr.dice.length > 1) {
 		const expressions = [];
-		
+
 		for (let i = 0; i < expr.dice.length - 1; i++) {
 			expressions.push(render(expr.dice[i]));
-			expressions.push(expr.ops[i]);
+			expressions.push(expr.ops[i].replace(/\*/, "\\\*"));
 		}
-		
+
 		expressions.push(render(expr.dice.slice(-1)[0]));
 		expressions.push("=");
 		expressions.push(expr.value);
-		
+
 		return expressions.join(" ");
 	} else if (expr.dice[0].type == "number") {
 		return expr.value;
@@ -170,7 +201,7 @@ function renderRoll(roll) {
 
 function renderFateRoll(roll) {
 	const rollValue = roll.roll == 0 ? "0" : roll.roll > 0 ? "+" : "-";
-	
+
 	if (!roll.valid) {
 		return "~~" + rollValue + "~~";
 	} else if (roll.success && roll.value == "1") {
