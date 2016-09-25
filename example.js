@@ -77,8 +77,12 @@ function render(roll) {
 			break;
 		case "roll":
 			return renderRoll(roll);
+		case "fateroll":
+			return renderFateRoll(roll);
 		case "number":
 			return roll.value;
+		case "fate":
+			return "F";
 		default:
 			throw new Error("Unable to render");
 	}
@@ -121,7 +125,14 @@ function renderDie(die) {
 		replies.push(render(roll));
 	}
 	
-	return "(" + replies.join(", ") + ") = " + die.value;
+	let reply = "(" + replies.join(", ") + ")";
+	
+	if (!["number", "fate"].includes(die.die.type) || !["number", "fate"].includes(die.count.type)) {
+		reply += "[*Rolling: " + render(die.count) + "d" + render(die.die) + "*]";
+	}
+	
+	reply += " = " + die.value;
+	return reply;
 }
 
 function renderExpression(expr) {
@@ -154,5 +165,19 @@ function renderRoll(roll) {
 		return "*"+roll.roll+"*";
 	} else {
 		return roll.roll;
+	}
+}
+
+function renderFateRoll(roll) {
+	const rollValue = roll.roll == 0 ? "0" : roll.roll > 0 ? "+" : "-";
+	
+	if (!roll.valid) {
+		return "~~" + rollValue + "~~";
+	} else if (roll.success && roll.value == "1") {
+		return "**"+rollValue+"**";
+	} else if (roll.success && roll.value == "-1") {
+		return "*"+rollValue+"*";
+	} else {
+		return rollValue;
 	}
 }

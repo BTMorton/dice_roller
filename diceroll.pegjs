@@ -1,12 +1,18 @@
 {
 	function generateRoll(die, order) {
-		const roll = Math.floor(Math.random() * die) + 1;
+		let roll = 0;
+		
+		if (die == "f") {
+			roll = Math.floor(Math.random() * 3) - 1;
+		} else {
+			roll = Math.floor(Math.random() * die) + 1;
+		}
 		
 		return {
 			order: order,
 			roll: roll,
 			success: false,
-			type: "roll",
+			type: die == "f" ? "fateroll" : "roll",
 			valid: true,
 			value: roll,
 		};
@@ -27,7 +33,7 @@
 	}
 }
 
-start = expr:Expression .* {
+start = expr:Expression {
 	expr.type = "root" + expr.type;
 	
 	return expr;
@@ -36,9 +42,29 @@ start = expr:Expression .* {
 AnyRoll = ModGroupedRoll / FullRoll / Integer
 
 ModGroupedRoll = group:GroupedRoll mods:(GroupSuccessMod / GroupFailureMod / GroupKeepMod / GroupDropMod)* {
-	group.dice = mods.reduce((dice, mod) => {
-		return mod(dice);
-	}, group.dice);
+	if (group.type == "groupExpression") {
+		let rolls = [];
+		
+		for (let i = 0; i < group.dice.length; i++) {
+			for (let roll of group.dice[i].rolls) {
+				roll.dieNumber = i;
+				rolls.push(roll);
+			}
+		}
+		
+		rolls = mods.reduce((rolls, mod) => {
+			return mod(rolls);
+		}, rolls);
+		
+		for (let roll of rolls) {
+			group.dice[roll.dieNumber].rolls[roll.order] = roll;
+			delete roll.dieNumber;
+		}
+	} else {
+		group.dice = mods.reduce((dice, mod) => {
+			return mod(dice);
+		}, group.dice);
+	}
 	
 	return group;
 }
@@ -75,7 +101,7 @@ GroupKeepMod = "k" highlow:("l" / "h")? expr:RollExpr? {
 			}
 		});
 		
-		let toKeep = expr ? expr.value : 1;
+		let toKeep = Math.max(Math.min(expr ? expr.value : 1, dice.length), 0);
 		
 		for (let i = 0; i < dice.length - toKeep; i++) {
 			dice[i].valid = false;
@@ -97,7 +123,7 @@ GroupDropMod = "d" highlow:("l" / "h")? expr:RollExpr? {
 			}
 		});
 		
-		let toDrop = expr ? expr.value : 1;
+		let toDrop = Math.max(Math.min(expr ? expr.value : 1, dice.length), 0);
 		
 		for (let i = 0; i < toDrop; i++) {
 			dice[i].valid = false;
@@ -110,6 +136,10 @@ GroupDropMod = "d" highlow:("l" / "h")? expr:RollExpr? {
 }
 
 GroupedRoll = "{" _ head:(GroupRollExpression / RollExpression) tail:(_ "," _ (GroupRollExpression / RollExpression))* _ "}" {
+	if (tail.length == 0) {
+		return head;
+	}
+	
 	const result = tail.reduce(function(result, element) {
 		return result + element[3].value;
 	}, head.value);
@@ -185,7 +215,7 @@ FullRoll = roll:TargetedRoll {
 	return roll;
 }
 
-TargetedRoll = head:RolledModRoll mods:(DropMod / KeepMod)* target:(SuccessMod / FailureMod)* {
+TargetedRoll = head:RolledModRoll mods:(DropMod / KeepMod)* target:(SuccessMod / FailureMod)* sort:(SortAscMod / SortDescMod)? {
 	if (mods.length > 0) {
 		head.rolls = mods.reduce((rolls, mod) => {
 			return mod(rolls);
@@ -204,7 +234,39 @@ TargetedRoll = head:RolledModRoll mods:(DropMod / KeepMod)* target:(SuccessMod /
 		});
 	}
 	
+	if (sort) {
+		head.rolls = sort(head.rolls);
+	}
+	
 	return head;
+}
+
+SortAscMod = "sa" {
+	return (rolls) => {
+		rolls = rolls.sort((a, b) => {
+			return a.roll - b.roll;
+		});
+		
+		for (let i = 0; i < rolls.length; i++) {
+			rolls[i].order = i;
+		}
+		
+		return rolls;
+	}
+}
+
+SortDescMod = "sd" {
+	return (rolls) => {
+		rolls = rolls.sort((a, b) => {
+			return b.roll - a.roll;
+		});
+		
+		for (let i = 0; i < rolls.length; i++) {
+			rolls[i].order = i;
+		}
+		
+		return rolls;
+	}
 }
 
 SuccessMod = mod:(">"/"<"/"=") expr:RollExpr {
@@ -233,6 +295,7 @@ FailureMod = "f" mod:(">"/"<"/"=")? expr:RollExpr {
 
 DropMod = "d" mod:("l" / "h")? expr:RollExpr? {
 	return (rolls) => {
+		
 		rolls = rolls.sort((a, b) => {
 			if (mod == "h") {
 				return b.roll - a.roll;
@@ -243,7 +306,7 @@ DropMod = "d" mod:("l" / "h")? expr:RollExpr? {
 			return b.valid - a.valid;
 		});
 		
-		let toDrop = expr ? expr.value : 1;
+		let toDrop = Math.max(Math.min(expr ? expr.value : 1, rolls.length), 0);
 		
 		for (let i = 0; i < toDrop; i++) {
 			rolls[i].valid = false;
@@ -257,6 +320,8 @@ DropMod = "d" mod:("l" / "h")? expr:RollExpr? {
 
 KeepMod = "k" mod:("l" / "h")? expr:RollExpr? {
 	return (rolls) => {
+		if (rolls.length == 0) return rolls;
+		
 		rolls = rolls.sort((a, b) => {
 			if (mod == "l") {
 				return b.roll - a.roll;
@@ -267,7 +332,7 @@ KeepMod = "k" mod:("l" / "h")? expr:RollExpr? {
 			return a.valid - b.valid;
 		});
 		
-		let toKeep = expr ? expr.value : 1;
+		let toKeep = Math.max(Math.min(expr ? expr.value : 1, rolls.length), 0);
 		
 		for (let i = 0; i < rolls.length - toKeep; i++) {
 			rolls[i].valid = false;
@@ -381,21 +446,29 @@ TargetMod = mod:(">"/"<"/"=")? value:RollExpr {
 	return successTest.bind(null, mod, value.value);
 }
 
-DiceRoll = head:RollExpr? tail:("d" RollExpr) {
+DiceRoll = head:RollExpr? "d" tail:(FateExpr / RollExpr) {
 	const rolls = [];
-	const value = head ? head.value : 1;
+	head = head ? head : { type: "number", value: 1 };
 	
-	for (let i = 0; i < value; i++) {
-		rolls.push(generateRoll(tail[1].value, i));
+	for (let i = 0; i < head.value; i++) {
+		rolls.push(generateRoll(tail.value, i));
 	}
 	
 	return {
-		die: tail[1],
+		die: tail,
+		count: head,
 		rolls: rolls,
 		type: "die",
 		valid: true,
 		value: 0,
 	};
+}
+
+FateExpr = ("F" / "f") {
+	return {
+		type: "fate",
+		value: "f",
+	}
 }
 
 RollExpr = BracketExpression / Integer;
@@ -452,7 +525,7 @@ Term = head:Factor tail:(_ ("*" / "/") _ Factor)* {
 	};
 }
 
-Factor = BracketExpression / AnyRoll
+Factor = AnyRoll / BracketExpression
 
 Integer "integer" = [0-9]+ {
 	const num = parseInt(text(), 10);
