@@ -302,14 +302,19 @@ DropMod = "d" mod:("l" / "h")? expr:RollExpr? {
 			} else {
 				return a.roll - b.roll;
 			}
-		}).sort((a, b) => {
-			return b.valid - a.valid;
 		});
 
 		let toDrop = Math.max(Math.min(expr ? expr.value : 1, rolls.length), 0);
+		let dropped = 0;
+		let i = 0;
 
-		for (let i = 0; i < toDrop; i++) {
-			rolls[i].valid = false;
+		while (i < rolls.length && dropped < toDrop) {
+			if (rolls[i].valid) {
+				rolls[i].valid = false;
+				dropped++;
+			}
+
+			i++;
 		}
 
 		return rolls.sort((a, b) => {
@@ -333,9 +338,18 @@ KeepMod = "k" mod:("l" / "h")? expr:RollExpr? {
 		});
 
 		let toKeep = Math.max(Math.min(expr ? expr.value : 1, rolls.length), 0);
+		let dropped = 0;
+		let i = 0;
 
-		for (let i = 0; i < rolls.length - toKeep; i++) {
-			rolls[i].valid = false;
+		let toDrop = rolls.reduce((roll, value) => (roll.valid ? 1 : 0) + value, 0) - toKeep
+
+		while (i < rolls.length && dropped < toDrop) {
+			if (rolls[i].valid) {
+				rolls[i].valid = false;
+				dropped++;
+			}
+
+			i++;
 		}
 
 		return rolls.sort((a, b) => {
@@ -458,7 +472,7 @@ DiceRoll = head:RollExpr? "d" tail:(FateExpr / RollExpr) {
 	const rolls = [];
 	head = head ? head : { type: "number", value: 1 };
 
-	if (head.value > 100) {
+	if (head.value > 1000) {
 		throw new Error("Entered number of dice too large");
 	}
 
