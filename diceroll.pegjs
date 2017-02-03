@@ -31,6 +31,10 @@
 
 		return false;
 	}
+
+	function checkReRolls() {
+
+	}
 }
 
 start = expr:Expression .* {
@@ -341,7 +345,7 @@ KeepMod = "k" mod:("l" / "h")? expr:RollExpr? {
 		let dropped = 0;
 		let i = 0;
 
-		let toDrop = rolls.reduce((roll, value) => (roll.valid ? 1 : 0) + value, 0) - toKeep
+		let toDrop = rolls.reduce((value, roll) => (roll.valid ? 1 : 0) + value, 0) - toKeep
 
 		while (i < rolls.length && dropped < toDrop) {
 			if (rolls[i].valid) {
@@ -436,6 +440,10 @@ ReRollMod = "r" target:TargetMod? {
 	target = target ? target : successTest.bind(null, "=", 1);
 
 	return (rolls, die) => {
+		if (target(1) && target(die.value)) {
+			throw new Error("Invalid reroll target");
+		}
+
 		for (let i = 0; i < rolls.length; i++) {
 			while (target(rolls[i].roll)) {
 				rolls[i].valid = false;
