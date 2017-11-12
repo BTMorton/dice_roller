@@ -31,10 +31,6 @@
 
 		return false;
 	}
-
-	function checkReRolls() {
-
-	}
 }
 
 start = expr:Expression .* {
@@ -476,7 +472,7 @@ TargetMod = mod:(">"/"<"/"=")? value:RollExpr {
 	return successTest.bind(null, mod, value.value);
 }
 
-DiceRoll = head:RollExpr? "d" tail:(FateExpr / RollExpr) {
+DiceRoll = head:RollExpr? "d" tail:(FateExpr / PercentExpr / RollExpr) {
 	const rolls = [];
 	head = head ? head : { type: "number", value: 1 };
 
@@ -502,6 +498,13 @@ FateExpr = ("F" / "f") {
 	return {
 		type: "fate",
 		value: "f",
+	}
+}
+
+PercentExpr = ("%") {
+	return {
+		type: "number",
+		value: "100",
 	}
 }
 
