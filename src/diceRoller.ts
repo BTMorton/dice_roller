@@ -1,0 +1,656 @@
+const parser = require("./diceroll.js");
+import { RootType, DiceRoll, ParsedType, NumberType, InlineExpression, RollExpressionType, MathType, GroupedRollType, SortRollType, SuccessModType, FailureModType, KeepModType, DropModType, ExplodeRoll, CompoundRoll, PenetrateRoll, ReRollMod, ReRollOnceMod, FullRoll, TermType, NonExpressionType } from "./diceRollTypes.js";
+
+export class DiceRoller {
+	public randFunction: () => number = Math.random;
+
+	constructor(randFunction?: () => number) {
+		if (randFunction) {
+			this.randFunction = randFunction;
+		}
+	}
+
+	public parse(input: string): RootType {
+		return parser.parse(input);
+	}
+
+	public roll(input: string): RollBase {
+		const root = parser.parse(input);
+		const roll = this.rollType(root);
+		return roll;
+	}
+
+	public rollValue(input: string): number {
+		return this.roll(input).value;
+	}
+
+	private rollType(input: RootType): RollBase {
+		let response: RollBase;
+
+		switch (input.type) {
+			case "diceExpression":
+				response = this.rollDiceExpr(input as RollExpressionType);
+				break;
+			case "group":
+				response = this.rollGroup(input as GroupedRollType);
+				break;
+			case "die":
+				response = this.rollDie(input as DiceRoll);
+				break;
+			case "expression":
+				response = this.rollExpression(input as NonExpressionType | TermType);
+				break;
+			case "inline":
+				response = this.rollType((input as InlineExpression).expr);
+				break;
+			case "number":
+				response = {
+					...(input as NumberType),
+					success: false,
+					valid: true,
+					order: 0,
+				}
+				break;
+			default:
+				throw new Error(`Unable to render ${input.type}`);
+		}
+
+		if (input.label) {
+			response.label = input.label;
+		}
+
+		return response;
+	}
+
+	private rollDiceExpr(input: RollExpressionType): DiceExpressionRoll {
+		const headRoll = this.rollType(input.head);
+		const rolls = [headRoll];
+		const ops: string[] = [];
+
+		const value = input.ops
+			.reduce((headValue, math: MathType, order: number) => {
+				const tailRoll = this.rollType(math.tail);
+				tailRoll.order = order;
+
+				rolls.push(tailRoll);
+				ops.push(math.op);
+
+				switch (math.op) {
+					case "+":
+						return headValue + tailRoll.value;
+					case "-":
+						return headValue - tailRoll.value;
+					default:
+						return headValue;
+				}
+			}, headRoll.value);
+
+		return {
+			dice: rolls,
+			ops,
+			success: false,
+			type: "diceexpressionroll",
+			valid: true,
+			value,
+			order: 0,
+		}
+	}
+
+	private rollGroup(input: GroupedRollType): GroupRoll {
+		let rolls: RollBase[] = input.rolls.map((roll, order) => ({
+			...this.rollType(roll),
+			order,
+		}));
+
+		if (input.mods) {
+			const mods = input.mods;
+			const applyGroupMods = (dice: RollBase[]) => {
+				const isSuccess = mods.some((mod) => ["failure", "success"].includes(mod.type));
+				dice = mods
+					.reduce((arr, mod) => this.applyGroupMod(arr, mod), dice);
+
+				if (isSuccess) {
+					dice = dice.map((die) => {
+						if (!die.success) {
+							die.value = 0;
+							die.success = true;
+						}
+						return die;
+					});
+				}
+
+				return dice;
+			}
+
+			if (rolls.length === 1 && ["die", "diceexpressionroll"].includes(rolls[0].type)) {
+				const roll = rolls[0];
+				let dice = roll.type === "die"
+					? (roll as DiceRollResult).rolls
+					: (roll as DiceExpressionRoll).dice
+						.filter((die) => die.type !== "number")
+						.reduce((arr: RollBase[], die) => [
+							...arr,
+							...die.type == "die"
+								? (die as DiceRollResult).rolls
+								: (die as GroupedRoll).dice,
+						], []);
+
+				dice = applyGroupMods(dice);
+				roll.value = dice.reduce((sum, die) => die.valid ? sum + die.value : sum, 0);
+			} else {
+				rolls = applyGroupMods(rolls);
+			}
+		}
+
+		return {
+			dice: rolls,
+			success: false,
+			type: "grouproll",
+			valid: true,
+			value: rolls.reduce((sum, roll) => !roll.valid ? sum : sum + roll.value, 0),
+			order: 0,
+		}
+	}
+
+	private rollDie(input: FullRoll): DiceRollResult {
+		const count = this.rollType(input.count);
+
+		let rolls: DieRollBase[];
+		let die: RollBase;
+		if (input.die.type === "fate") {
+			die = {
+				type: "fate",
+				success: false,
+				valid: false,
+				value: 0,
+				order: 0,
+			};
+			rolls = Array.from({length: count.value}, (_, i) => this.generateFateRoll(i));
+		} else {
+			die = this.rollType(input.die);
+			rolls = Array.from({length: count.value}, (_, i) => this.generateDiceRoll(die.value, i));
+		}
+
+		if (input.mods) {
+			rolls = input.mods
+				.reduce((rolls, mod) => this.applyMod(rolls, mod), rolls);
+		}
+
+		if (input.targets) {
+			rolls = input.targets
+				.reduce((rolls, target) => this.applyMod(rolls, target), rolls)
+				.map((roll) => {
+					if (!roll.success) {
+						roll.value = 0;
+						roll.success = true;
+					}
+					return roll;
+				});
+		}
+
+		let matched = false;
+		let matchCount = 0;
+		if (input.match) {
+			const match = input.match;
+			const counts = rolls.reduce((map: Map<number, number>, roll) =>
+				map.set(roll.roll, (map.get(roll.roll) || 0) + 1),
+				new Map());
+
+			const matches = new Set(Array.from(counts.entries())
+				.filter(([_, count]) => count >= match.min.value)
+				.filter(([val]) => !(match.mod
+					&& match.expr)
+					|| this.successTest(match.mod, this.rollType(match.expr).value, val))
+				.map(([val]) => val));
+
+			rolls.filter((roll) => matches.has(roll.roll))
+				.forEach((roll) => roll.matched = true);
+
+			if (match.count) {
+				matched = true;
+				matchCount = matches.size;
+			}
+		}
+
+		if (input.sort) {
+			rolls = this.applySort(rolls, input.sort);
+		}
+
+		return {
+			count: count,
+			die,
+			rolls: rolls,
+			success: false,
+			type: "die",
+			valid: true,
+			value: matched ? matchCount : rolls.reduce((sum, roll) => !roll.valid ? sum : sum + roll.value, 0),
+			order: 0,
+			matched,
+		}
+	}
+
+	private rollExpression(input: RollExpressionType | NonExpressionType | TermType): ExpressionRoll {
+		const headRoll = this.rollType(input.head);
+		const rolls = [headRoll];
+		const ops: string[] = [];
+
+		const value = (input.ops as MathType<any>[])
+			.reduce((headValue: number, math: MathType) => {
+				const tailRoll = this.rollType(math.tail);
+				rolls.push(tailRoll);
+				ops.push(math.op);
+
+				switch (math.op) {
+					case "+":
+						return headValue + tailRoll.value;
+					case "-":
+						return headValue - tailRoll.value;
+					case "*":
+						return headValue * tailRoll.value;
+					case "/":
+						return headValue / tailRoll.value;
+					default:
+						return headValue;
+				}
+			}, headRoll.value);
+
+		return {
+			dice: rolls,
+			ops,
+			success: false,
+			type: "expressionroll",
+			valid: true,
+			value,
+			order: 0,
+		}
+	}
+
+	private applyGroupMod(rolls: RollBase[], mod: ParsedType): RollBase[] {
+		return this.getGroupModMethod(mod)(rolls);
+	}
+
+	private getGroupModMethod(mod: ParsedType): GroupModMethod {
+		const lookup = (roll: RollBase) => roll.value;
+		switch (mod.type) {
+			case "success":
+				return this.getSuccessMethod(mod as SuccessModType, lookup);
+			case "failure":
+				return this.getFailureMethod(mod as FailureModType, lookup);
+			case "keep":
+				return this.getKeepMethod(mod as KeepModType, lookup);
+			case "drop":
+				return this.getDropMethod(mod as DropModType, lookup);
+			default:
+				throw new Error(`Mod ${mod.type} is not recognised`);
+		}
+	}
+
+	private applyMod(rolls: DieRollBase[], mod: ParsedType): DieRollBase[] {
+		return this.getModMethod(mod)(rolls);
+	}
+
+	private getModMethod(mod: ParsedType): ModMethod {
+		const lookup = (roll: DieRollBase) => roll.roll;
+		switch (mod.type) {
+			case "success":
+				return this.getSuccessMethod(mod as SuccessModType, lookup);
+			case "failure":
+				return this.getFailureMethod(mod as FailureModType, lookup);
+			case "keep":
+				return (rolls) =>
+					this.getKeepMethod(mod as KeepModType, lookup)(rolls)
+						.sort((a, b) => a.order - b.order);
+			case "drop":
+				return (rolls) =>
+					this.getDropMethod(mod as DropModType, lookup)(rolls)
+						.sort((a, b) => a.order - b.order);
+			case "explode":
+				return this.getExplodeMethod((mod as ExplodeRoll));
+			case "compound":
+				return this.getCompoundMethod((mod as CompoundRoll));
+			case "penetrate":
+				return this.getPenetrateMethod((mod as PenetrateRoll));
+			case "reroll":
+				return this.getReRollMethod((mod as ReRollMod));
+			case "rerollOnce":
+				return this.getReRollOnceMethod((mod as ReRollOnceMod));
+			default:
+				throw new Error(`Mod ${mod.type} is not recognised`);
+		}
+	}
+
+	private applySort(rolls: DieRollBase[], mod: SortRollType) {
+		rolls.sort((a, b) => mod.asc ? a.roll - b.roll : b.roll - a.roll);
+		rolls.forEach((roll, i) => roll.order = i);
+		return rolls;
+	}
+
+	private getSuccessMethod<T extends RollBase>(mod: SuccessModType, lookup: (roll: T) => number) {
+		const exprResult = this.rollType(mod.expr);
+
+		return (rolls: T[]) => {
+			return rolls.map((roll) => {
+				if (!roll.valid) { return roll; }
+
+				if (this.successTest(mod.mod, exprResult.value, lookup(roll))) {
+					if (roll.success) {
+						roll.value += 1;
+					} else {
+						roll.value = 1;
+						roll.success = true;
+					}
+				}
+				return roll;
+			});
+		}
+	}
+
+	private getFailureMethod<T extends RollBase>(mod: FailureModType, lookup: (roll: T) => number) {
+		const exprResult = this.rollType(mod.expr);
+
+		return (rolls: T[]) => {
+			return rolls.map((roll) => {
+				if (!roll.valid) { return roll; }
+
+				if (this.successTest(mod.mod, exprResult.value, lookup(roll))) {
+					if (roll.success) {
+						roll.value -= 1;
+					} else {
+						roll.value = -1;
+						roll.success = true;
+					}
+				}
+				return roll;
+			});
+		}
+	}
+
+	private getKeepMethod<T extends RollBase>(mod: KeepModType, lookup: (roll: T) => number) {
+		const exprResult = this.rollType(mod.expr);
+
+		return (rolls: T[]) => {
+			if (rolls.length == 0) return rolls;
+
+			rolls = rolls
+				.sort((a, b) => mod.highlow == "l"
+					? lookup(b) - lookup(a)
+					: lookup(a) - lookup(b))
+				.sort((a, b) => (a.valid ? 1 : 0) - (b.valid ? 1 : 0));
+
+			let toKeep = Math.max(Math.min(exprResult.value, rolls.length), 0);
+			let dropped = 0;
+			let i = 0;
+
+			let toDrop = rolls.reduce((value, roll) => (roll.valid ? 1 : 0) + value, 0) - toKeep;
+
+			while (i < rolls.length && dropped < toDrop) {
+				if (rolls[i].valid) {
+					rolls[i].valid = false;
+					dropped++;
+				}
+
+				i++;
+			}
+
+			return rolls;
+		}
+	}
+
+	private getDropMethod<T extends RollBase>(mod: DropModType, lookup: (roll: T) => number) {
+		const exprResult = this.rollType(mod.expr);
+
+		return (rolls: T[]) => {
+			rolls = rolls.sort((a, b) => mod.highlow == "h"
+				? lookup(b) - lookup(a)
+				: lookup(a) - lookup(b));
+
+			let toDrop = Math.max(Math.min(exprResult.value, rolls.length), 0);
+			let dropped = 0;
+			let i = 0;
+
+			while (i < rolls.length && dropped < toDrop) {
+				if (rolls[i].valid) {
+					rolls[i].valid = false;
+					dropped++;
+				}
+
+				i++;
+			}
+
+			return rolls;
+		}
+	}
+
+	private getExplodeMethod(mod: ExplodeRoll) {
+		const targetValue = mod.target
+			? this.rollType(mod.target.value)
+			: null;
+
+		return (rolls: DieRollBase[]) => {
+			const targetMethod = targetValue
+				? (roll: DieRollBase) => this.successTest(mod.target.mod, targetValue.value, roll.roll)
+				: (roll: DieRollBase) => this.successTest("=", roll.type == "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
+
+			for (let i = 0; i < rolls.length; i++) {
+				let roll = rolls[i];
+				roll.order = i;
+				let explodeCount = 0;
+
+				while (targetMethod(roll) && explodeCount++ < 1000) {
+					const newRoll = this.reRoll(roll, ++i);
+					rolls.splice(i, 0, newRoll);
+					roll = newRoll;
+				}
+			}
+
+			return rolls;
+		}
+	}
+
+	private getCompoundMethod(mod: CompoundRoll) {
+		const targetValue = mod.target
+			? this.rollType(mod.target.value)
+			: null;
+
+		return (rolls: DieRollBase[]) => {
+			const targetMethod = targetValue
+				? (roll: DieRollBase) => this.successTest(mod.target.mod, targetValue.value, roll.roll)
+				: (roll: DieRollBase) => this.successTest("=", roll.type == "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
+
+			for (let i = 0; i < rolls.length; i++) {
+				let roll = rolls[i];
+				let rollValue = roll.roll;
+				let explodeCount = 0;
+
+				while (targetMethod(roll) && explodeCount++ < 1000) {
+					const newRoll = this.reRoll(rolls[i], ++i);
+					rollValue += newRoll.roll;
+					roll = newRoll;
+				}
+
+				roll.value = rollValue;
+				roll.roll = rollValue;
+			}
+
+			return rolls;
+		}
+	}
+
+	private getPenetrateMethod(mod: PenetrateRoll) {
+		const targetValue = mod.target
+			? this.rollType(mod.target.value)
+			: null;
+
+		return (rolls: DieRollBase[]) => {
+			const targetMethod = targetValue
+				? (roll: DieRollBase) => this.successTest(mod.target.mod, targetValue.value, roll.roll)
+				: (roll: DieRollBase) => this.successTest("=", roll.type == "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
+
+			if (targetValue
+				&& rolls[0].type === "roll"
+				&& targetMethod(rolls[0])
+				&& this.successTest(mod.target.mod, targetValue.value, 1)
+			) {
+				throw new Error("Invalid reroll target");
+			}
+
+			for (let i = 0; i < rolls.length; i++) {
+				while (targetMethod(rolls[i])) {
+					rolls[i].valid = false;
+					const newRoll = this.reRoll(rolls[i], i + 1);
+					rolls.splice(++i, 0, newRoll);
+				}
+			}
+
+			return rolls;
+		}
+	}
+
+	private getReRollMethod(mod: ReRollMod) {
+		const targetMethod = mod.target
+			? this.successTest.bind(null, mod.target.mod, this.rollType(mod.target.value).value)
+			: this.successTest.bind(null, "=", 1);
+
+		return (rolls: DieRollBase[]) => {
+			if (rolls[0].type === "roll" && targetMethod(1) && targetMethod((rolls[0] as DieRoll).die)) {
+				throw new Error("Invalid reroll target");
+			}
+
+			for (let i = 0; i < rolls.length; i++) {
+				while (targetMethod(rolls[i].roll)) {
+					rolls[i].valid = false;
+					const newRoll = this.reRoll(rolls[i], i + 1);
+					rolls.splice(++i, 0, newRoll);
+				}
+			}
+
+			return rolls;
+		}
+	}
+
+	private getReRollOnceMethod(mod: ReRollOnceMod) {
+		const targetMethod = mod.target
+			? this.successTest.bind(null, mod.target.mod, this.rollType(mod.target.value).value)
+			: this.successTest.bind(null, "=", 1);
+
+		return (rolls: DieRollBase[]) => {
+			if (rolls[0].type === "roll" && targetMethod(1) && targetMethod((rolls[0] as DieRoll).die)) {
+				throw new Error("Invalid reroll target");
+			}
+
+			for (let i = 0; i < rolls.length; i++) {
+				if (targetMethod(rolls[i].roll)) {
+					rolls[i].valid = false;
+					const newRoll = this.reRoll(rolls[i], i + 1);
+					rolls.splice(++i, 0, newRoll);
+				}
+			}
+
+			return rolls;
+		}
+	}
+
+	private successTest(mod: string , target: number, roll: number) {
+		switch (mod) {
+			case ">":
+				return roll >= target;
+			case "<":
+				return roll <= target;
+			case "=":
+			default:
+				return roll == target;
+		}
+	}
+
+	private reRoll(roll: DieRollBase, order: number): DieRollBase {
+		switch (roll.type) {
+			case "roll":
+				return this.generateDiceRoll((roll as DieRoll).die, order);
+			case "dateroll":
+				return this.generateFateRoll(order);
+			default:
+				throw new Error(`Cannot do a reroll of a ${roll.type}.`);
+		}
+	}
+
+	private generateDiceRoll(die: number, order: number): DieRoll {
+		const roll = Math.floor(this.randFunction() * die) + 1;
+
+		return {
+			die,
+			matched: false,
+			order,
+			roll,
+			success: false,
+			type: "roll",
+			valid: true,
+			value: roll,
+		}
+	}
+
+	private generateFateRoll(order: number): FateDieRoll {
+		const roll = Math.floor(this.randFunction() * 3) - 1;
+
+		return {
+			matched: false,
+			order,
+			roll,
+			success: false,
+			type: "fateroll",
+			valid: true,
+			value: roll,
+		}
+	}
+}
+
+type ModMethod = (rolls: DieRollBase[]) => DieRollBase[]
+type GroupModMethod = (rolls: RollBase[]) => RollBase[]
+
+export interface RollBase {
+	success: boolean;
+	type: string;
+	valid: boolean;
+	value: number;
+	label?: string;
+	order: number;
+}
+
+interface GroupedRoll extends RollBase {
+	dice: RollBase[];
+}
+
+export interface DiceExpressionRoll extends GroupedRoll {
+	type: "diceexpressionroll";
+	ops: string[]
+}
+
+export interface ExpressionRoll extends GroupedRoll {
+	type: "expressionroll";
+	ops: string[]
+}
+
+export interface GroupRoll extends GroupedRoll {
+	type: "grouproll";
+}
+
+export interface DiceRollResult extends RollBase {
+	die: RollBase;
+	type: "die";
+	rolls: DieRollBase[];
+	count: RollBase;
+	matched: boolean;
+}
+
+export interface DieRollBase extends RollBase {
+	roll: number;
+	matched: boolean;
+}
+
+export interface DieRoll extends DieRollBase {
+	die: number;
+	type: "roll";
+}
+
+export interface FateDieRoll extends DieRollBase {
+	type: "fateroll";
+}

@@ -2,10 +2,17 @@
   "name": "dice_roller",
   "version": "1.0.0",
   "description": "A javascript dice roller in the style of roll20",
-  "main": "diceroll.js",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "pegjs diceroll.pegjs",
-    "postinstall": "npm run build"
+    "build": "npm run clean && pegjs src/diceroll.pegjs && webpack",
+    "clean": "rimraf dist/ src/diceroll.js",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -23,7 +30,15 @@
   },
   "homepage": "https://github.com/BTMorton/dice_roller#readme",
   "devDependencies": {
-    "discord.js": "^9.3.0",
-    "pegjs": "^0.10.0"
+    "@types/jest": "^24.0.13",
+    "@types/node": "^10.14.8",
+    "jest": "^24.8.0",
+    "pegjs": "^0.10.0",
+    "rimraf": "^2.6.3",
+    "ts-jest": "^24.0.2",
+    "ts-loader": "^6.0.2",
+    "typescript": "^3.5.1",
+    "webpack": "^4.32.2",
+    "webpack-cli": "^3.3.2"
   }
 }
