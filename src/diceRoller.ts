@@ -3,11 +3,13 @@ import { RootType, DiceRoll, ParsedType, NumberType, InlineExpression, RollExpre
 
 export class DiceRoller {
 	public randFunction: () => number = Math.random;
+	public maxRollCount: number = 1000;
 
-	constructor(randFunction?: () => number) {
+	constructor(randFunction?: () => number, maxRolls = 1000) {
 		if (randFunction) {
 			this.randFunction = randFunction;
 		}
+		this.maxRollCount = maxRolls;
 	}
 
 	public parse(input: string): RootType {
@@ -16,12 +18,15 @@ export class DiceRoller {
 
 	public roll(input: string): RollBase {
 		const root = parser.parse(input);
-		const roll = this.rollType(root);
-		return roll;
+		return this.rollType(root);
 	}
 
 	public rollValue(input: string): number {
 		return this.roll(input).value;
+	}
+
+	public rollParsed(parsed: RootType): RollBase {
+		return this.rollType(parsed);
 	}
 
 	private rollType(input: RootType): RollBase {
@@ -154,6 +159,10 @@ export class DiceRoller {
 
 	private rollDie(input: FullRoll): DiceRollResult {
 		const count = this.rollType(input.count);
+
+		if (count.value > this.maxRollCount) {
+			throw new Error("Entered number of dice too large.");
+		}
 
 		let rolls: DieRollBase[];
 		let die: RollBase;
@@ -431,6 +440,14 @@ export class DiceRoller {
 				? (roll: DieRollBase) => this.successTest(mod.target.mod, targetValue.value, roll.roll)
 				: (roll: DieRollBase) => this.successTest("=", roll.type == "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
 
+			if (
+				rolls[0].type === "roll"
+				&& targetMethod({ roll: 1 } as DieRollBase)
+				&& targetMethod({ roll: (rolls[0] as DieRoll).die } as DieRollBase)
+			) {
+				throw new Error("Invalid reroll target");
+			}
+
 			for (let i = 0; i < rolls.length; i++) {
 				let roll = rolls[i];
 				roll.order = i;
@@ -456,6 +473,14 @@ export class DiceRoller {
 			const targetMethod = targetValue
 				? (roll: DieRollBase) => this.successTest(mod.target.mod, targetValue.value, roll.roll)
 				: (roll: DieRollBase) => this.successTest("=", roll.type == "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
+
+			if (
+				rolls[0].type === "roll"
+				&& targetMethod({ roll: 1 } as DieRollBase)
+				&& targetMethod({ roll: (rolls[0] as DieRoll).die } as DieRollBase)
+			) {
+				throw new Error("Invalid reroll target");
+			}
 
 			for (let i = 0; i < rolls.length; i++) {
 				let roll = rolls[i];
@@ -495,10 +520,16 @@ export class DiceRoller {
 			}
 
 			for (let i = 0; i < rolls.length; i++) {
-				while (targetMethod(rolls[i])) {
-					rolls[i].valid = false;
-					const newRoll = this.reRoll(rolls[i], i + 1);
-					rolls.splice(++i, 0, newRoll);
+				let roll = rolls[i];
+				roll.order = i;
+				let explodeCount = 0;
+
+				while (targetMethod(roll) && explodeCount++ < 1000) {
+					const newRoll = this.reRoll(roll, ++i);
+					newRoll.value -= 1;
+					newRoll.roll -= 1;
+					rolls.splice(i, 0, newRoll);
+					roll = newRoll;
 				}
 			}
 
