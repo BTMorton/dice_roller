@@ -183,7 +183,7 @@ Then do a build:
 npm run build
 ```
 
-This does three things:
+This does four things:
 
 ```bash
 # Clean any existing builds
@@ -191,6 +191,9 @@ npm run clean
 
 # Build the dice grammer
 npx pegjs src/diceroll.pegjs
+
+# Run tslint against the project
+tslint -c tslint.json --project tsconfig.json
 
 # Then run webpack to build and package everything up nicely
 webpack
