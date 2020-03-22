@@ -1,4 +1,4 @@
-# Dice Roller
+# Dice Roller & Parser
 
 This dice roller is a string parser that returns an object containing the component parts of the dice roll. It supports the full [Roll20 Dice Reference](https://wiki.roll20.net/Dice_Reference). It uses a [pegjs](https://github.com/pegjs/pegjs) grammar to create a [representation of the dice roll format](#parsed-roll-output). This can then be converted into a simple number value, or to a [complex object](#roll-result-output) used to display the full roll details.
 
@@ -7,19 +7,19 @@ This dice roller is a string parser that returns an object containing the compon
 Install the library using:
 
 ```
-npm install dice_roller
+npm install dice-roller-parser
 ```
 
 Once installed, simply load the library, either in the browser:
 
 ```html
-<script src="node_modules/dice_roller/dist/index.js"></script>
+<script src="node_modules/dice-roller-parser/dist/index.js"></script>
 ```
 
 Or in node:
 
 ```javascript
-import { DiceRoller } from "dice_roller";
+import { DiceRoller } from "dice-roller-parser";
 ```
 
 Then create a new instance of the [`DiceRoller`](#DiceRoller) class, and use it to perform some dice rolls.
@@ -38,7 +38,7 @@ console.log(rollObject.value);
 
 ## Usage
 
-The dice_roller library exposes two classes, a [`DiceRoller`](#DiceRoller) and a [`DiscordRollRenderer`](#DiscordRollRenderer).
+This library exposes two classes, a [`DiceRoller`](#DiceRoller) and a [`DiscordRollRenderer`](#DiscordRollRenderer).
 
 ### `DiceRoller`
 
