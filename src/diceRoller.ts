@@ -375,13 +375,15 @@ export class DiceRoller {
 
 		return (rolls: T[]) => {
 			return rolls.map((roll) => {
-				if (!roll.valid) { return roll; }
+				if (!roll.valid) return roll;
 				if (roll.type !== "roll") return roll;
+				if (roll.success) return roll;
 
+				const critRoll = (roll as unknown as DieRoll);
 				if (this.successTest(mod.mod, exprResult.value, lookup(roll))) {
-					if (!roll.success) {
-						(roll as unknown as DieRoll).critical = "success";
-					}
+					critRoll.critical = "success";
+				} else if (critRoll.critical === "success") {
+					critRoll.critical = null;
 				}
 
 				return roll;
@@ -394,13 +396,15 @@ export class DiceRoller {
 
 		return (rolls: T[]) => {
 			return rolls.map((roll) => {
-				if (!roll.valid) { return roll; }
+				if (!roll.valid) return roll;
 				if (roll.type !== "roll") return roll;
+				if (roll.success) return roll;
 
+				const critRoll = (roll as unknown as DieRoll);
 				if (this.successTest(mod.mod, exprResult.value, lookup(roll))) {
-					if (!roll.success) {
-						(roll as unknown as DieRoll).critical = "failure";
-					}
+					critRoll.critical = "failure";
+				} else if (critRoll.critical === "failure") {
+					critRoll.critical = null;
 				}
 
 				return roll;
