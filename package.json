@@ -12,7 +12,8 @@
 	"scripts": {
 		"build": "npm run clean && pegjs src/diceroll.pegjs && tslint -c tslint.json --project tsconfig.json && webpack",
 		"clean": "rimraf dist/ src/diceroll.js",
-		"test": "jest"
+		"test": "jest",
+		"prepublishOnly": "npm run build"
 	},
 	"repository": {
 		"type": "git",
