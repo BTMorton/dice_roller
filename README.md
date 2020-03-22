@@ -1,6 +1,6 @@
 # Dice Roller & Parser
 
-This dice roller is a string parser that returns an object containing the component parts of the dice roll. It supports the full [Roll20 Dice Reference](https://wiki.roll20.net/Dice_Reference). It uses a [pegjs](https://github.com/pegjs/pegjs) grammar to create a [representation of the dice roll format](#parsed-roll-output). This can then be converted into a simple number value, or to a [complex object](#roll-result-output) used to display the full roll details.
+This dice roller is a string parser that returns an object containing the component parts of the dice roll. It supports the full [Roll20 Dice Specification](https://roll20.zendesk.com/hc/en-us/articles/360037773133-Dice-Reference#DiceReference-Roll20DiceSpecification). It uses a [pegjs](https://github.com/pegjs/pegjs) grammar to create a [representation of the dice roll format](#parsed-roll-output). This can then be converted into a simple number value, or to a [complex object](#roll-result-output) used to display the full roll details.
 
 ## Quickstart
 
@@ -409,9 +409,9 @@ This object represents a grouped roll with an optional modifier. This object ext
 
 > `{4d6+3d8}kh1`
 
-| Property | Type                                                                                                   | Description                                      |
-| -------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| mods     | `Array<`[`KeepDropModType`](#KeepDropModType)` | `[`SuccessFailureModType`](#SuccessFailureModType)`>` | The modifiers to be applied to the grouped roll. |
+| Property | Type                                                                                                 | Description                                      |
+| -------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| mods     | `Array<`[`KeepDropModType`](#KeepDropModType)`|`[`SuccessFailureModType`](#SuccessFailureModType)`>` | The modifiers to be applied to the grouped roll. |
 
 #### `ConditionCheck`
 
@@ -549,12 +549,12 @@ An object representing a roll including the dice roll, and any modifiers. This o
 
 > `2d6kh1`
 
-| Property | Type                                                                           | Description                                                             |
-| -------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| mods?    | `Array<`[`ReRollMod`](#ReRollMod)` | `[`KeepDropModType`](#KeepDropModType)`>` | Any modifiers attached to the roll. This property is optional.          |
-| targets? | `Array<`[`SuccessFailureCritModType`](#SuccessFailureCritModType)`>`           | Any success or failure targets for the roll. This property is optional. |
-| match?   | [`MatchModTyp`](#MatchModTyp)                                                  | Any match modifiers for the roll. This property is optional.            |
-| sort?    | [`SortRollType`](#SortRollType)                                                | Any sort operations to apply to the roll. This property is optional.    |
+| Property | Type                                                                         | Description                                                             |
+| -------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| mods?    | `Array<`[`ReRollMod`](#ReRollMod)`|`[`KeepDropModType`](#KeepDropModType)`>` | Any modifiers attached to the roll. This property is optional.          |
+| targets? | `Array<`[`SuccessFailureCritModType`](#SuccessFailureCritModType)`>`         | Any success or failure targets for the roll. This property is optional. |
+| match?   | [`MatchModTyp`](#MatchModTyp)                                                | Any match modifiers for the roll. This property is optional.            |
+| sort?    | [`SortRollType`](#SortRollType)                                              | Any sort operations to apply to the roll. This property is optional.    |
 
 #### `SortRollType`
 
@@ -606,11 +606,11 @@ The representation of a die roll. This object extends the [`RootType`](#RootType
 
 > `2d6`
 
-| Property | Type                                                | Description                                                                              |
-| -------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| die      | [`RollExpr`](#RollExpr)` | `[`FateExpr`](#FateExpr) | The die value to roll against, can be a fate die, a number or a complex roll expression. |
-| count    | [`RollExpr`](#RollExpr)                             | The number of time to roll this die.                                                     |
-| type     | `"die"`                                             | The type of parsed item this object represents.                                          |
+| Property | Type                                              | Description                                                                              |
+| -------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| die      | [`RollExpr`](#RollExpr)`|`[`FateExpr`](#FateExpr) | The die value to roll against, can be a fate die, a number or a complex roll expression. |
+| count    | [`RollExpr`](#RollExpr)                           | The number of time to roll this die.                                                     |
+| type     | `"die"`                                           | The type of parsed item this object represents.                                          |
 
 #### `FateExpr`
 
@@ -673,6 +673,7 @@ There is a second templated type `OpValues` which specifies the type of operatio
 An object representing a math function to be applied and the expression to apply it to. This object extends the [`RootType`](#RootType) interface.
 
 **Example**
+
 > `floor(3d6 / 2d4)`
 
 | Property | Type                                 | Description                                     |
