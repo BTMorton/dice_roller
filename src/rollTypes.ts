@@ -1,3 +1,5 @@
+import { MathFunction, MathOperation, DiceGroupMathOperation, CriticalType } from "utilityTypes";
+
 /** The following types of roll can be used */
 export type RollType = "number"
 	| "diceexpressionroll"
@@ -41,7 +43,7 @@ export interface GroupedRollBase extends RollBase {
 export interface DiceExpressionRoll extends GroupedRollBase {
 	type: "diceexpressionroll";
 	/** The operations to perform on the rolls */
-	ops: ("+" | "-")[];
+	ops: DiceGroupMathOperation[];
 }
 
 /**
@@ -51,7 +53,7 @@ export interface DiceExpressionRoll extends GroupedRollBase {
 export interface ExpressionRoll extends GroupedRollBase {
 	type: "expressionroll";
 	/** The operations to perform on the rolls */
-	ops: ("+" | "-" | "*" | "/" | "%" | "**")[];
+	ops: MathOperation[];
 }
 
 /**
@@ -61,7 +63,7 @@ export interface ExpressionRoll extends GroupedRollBase {
 export interface MathFunctionRoll extends RollBase {
 	type: "mathfunction";
 	/** The operations to perform on the rolls */
-	op: "floor" | "ceil" | "round" | "abs";
+	op: MathFunction;
 	/** The expression that the function is applied upon */
 	expr: RollBase;
 }
@@ -106,7 +108,7 @@ export interface DieRoll extends DieRollBase {
 	/** The die number to be rolled */
 	die: number;
 	type: "roll";
-	critical: "success" | "failure" | null;
+	critical: CriticalType;
 }
 
 /**
