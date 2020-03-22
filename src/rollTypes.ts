@@ -1,4 +1,4 @@
-import { MathFunction, MathOperation, DiceGroupMathOperation, CriticalType } from "utilityTypes";
+import { MathFunction, MathOperation, DiceGroupMathOperation, CriticalType } from "./utilityTypes";
 
 /** The following types of roll can be used */
 export type RollType = "number"
