@@ -1,6 +1,6 @@
 {
   "name": "dice-roller-parser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A javascript dice roller that parses roll20 format strings and generates rolled outputs",
   "main": "dist/index.js",
   "module": "dist/index.js",
