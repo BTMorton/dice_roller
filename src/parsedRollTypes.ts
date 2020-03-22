@@ -1,4 +1,4 @@
-import { MathFunction, DiceGroupMathOperation, MathOperation, CompareOperation, HighLowType } from "utilityTypes";
+import { MathFunction, DiceGroupMathOperation, MathOperation, CompareOperation, HighLowType } from "./utilityTypes";
 
 /** The type of the parsed object  */
 export type ParsedObjectType = "number"
