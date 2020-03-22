@@ -1,7 +1,7 @@
 {
   "name": "dice_roller",
   "version": "0.1.0",
-  "description": "A javascript dice roller in the style of roll20",
+  "description": "A javascript dice roller that parses roll20 format strings and generates rolled outputs",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,9 +19,18 @@
     "url": "git+https://github.com/BTMorton/dice_roller.git"
   },
   "keywords": [
-    "roll20",
     "dice",
-    "roller"
+    "roller",
+    "roll",
+    "roll20",
+    "rpg",
+    "trpg",
+    "tabletop",
+    "dnd",
+    "d&d",
+    "dungeons",
+    "dragons",
+    "pathfinder"
   ],
   "author": "Ben Morton <ben.morton91@gmail.com>",
   "license": "MIT",
