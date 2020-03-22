@@ -6,7 +6,7 @@ This dice roller is a string parser that returns an object containing the compon
 
 Install the library using:
 
-```
+```bash
 npm install dice-roller-parser
 ```
 
@@ -173,32 +173,32 @@ console.log(render);
 
 To develop this library, simply clone the repository, run an install:
 
-```
+```bash
 npm install
 ```
 
 Then do a build:
 
-```
+```bash
 npm run build
 ```
 
 This does three things:
 
-```
-//	Clean any existing builds
+```bash
+# Clean any existing builds
 npm run clean
 
-//	Build the dice grammer
+# Build the dice grammer
 npx pegjs src/diceroll.pegjs
 
-//	Then run webpack to build and package everything up nicely
+# Then run webpack to build and package everything up nicely
 webpack
 ```
 
 To run the test suite, use:
 
-```
+```bash
 npm run test
 ```
 
