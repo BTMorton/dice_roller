@@ -253,9 +253,9 @@ PercentExpr = ("%") {
 
 RollExpr = BracketExpression / Integer;
 
-Expression = InlineExpression / NonExpression / BracketExpression;
+Expression = InlineExpression / AddSubExpression / BracketExpression;
 
-BracketExpression = "(" expr:NonExpression ")" _ label:Label? {
+BracketExpression = "(" expr:AddSubExpression ")" _ label:Label? {
 	if (label) {
 		expr.label = label;
 	}
@@ -263,7 +263,7 @@ BracketExpression = "(" expr:NonExpression ")" _ label:Label? {
 	return expr;
 }
 
-NonExpression = head:Term tail:(_ ("+" / "-") _ Term)* {
+AddSubExpression = head:MultDivExpression tail:(_ ("+" / "-") _ MultDivExpression)* {
 	if (tail.length == 0) {
 		return head;
 	}
@@ -282,7 +282,7 @@ NonExpression = head:Term tail:(_ ("+" / "-") _ Term)* {
 	};
 }
 
-Term = head:Factor tail:(_ ("*" / "/") _ Factor)* {
+MultDivExpression = head:RollOrBrackets tail:(_ ("*" / "/") _ RollOrBrackets)* {
 	if (tail.length == 0) {
 		return head;
 	}
@@ -301,7 +301,7 @@ Term = head:Factor tail:(_ ("*" / "/") _ Factor)* {
 	};
 }
 
-Factor = AnyRoll / BracketExpression
+RollOrBrackets = AnyRoll / BracketExpression
 
 Integer "integer" = [0-9]+ {
 	const num = parseInt(text(), 10);

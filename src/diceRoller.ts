@@ -1,10 +1,19 @@
 const parser = require("./diceroll.js");
-import { RootType, DiceRoll, ParsedType, NumberType, InlineExpression, RollExpressionType, MathType, GroupedRollType, SortRollType, SuccessModType, FailureModType, KeepModType, DropModType, ExplodeRoll, CompoundRoll, PenetrateRoll, ReRollMod, ReRollOnceMod, FullRoll, TermType, NonExpressionType } from "./diceRollTypes.js";
+import {
+	RootType, DiceRoll, NumberType, InlineExpression, RollExpressionType, MathType, GroupedRoll, SortRollType, SuccessModType,
+	FailureModType, KeepModType, DropModType, ExplodeRoll, CompoundRoll, PenetrateRoll, ReRollMod, ReRollOnceMod, FullRoll, ParsedType, MathExpression
+} from "./diceRollTypes";
 
 export class DiceRoller {
 	public randFunction: () => number = Math.random;
 	public maxRollCount: number = 1000;
 
+	/**
+	 * The DiceRoller class that performs parsing and rolls of {@link https://wiki.roll20.net/Dice_Reference roll20 format} input strings
+	 * @constructor
+	 * @param randFunction The random number generator function to use when rolling, default: Math.random
+	 * @param maxRolls The max number of rolls to perform for a single die, default: 1000
+	 */
 	constructor(randFunction?: () => number, maxRolls = 1000) {
 		if (randFunction) {
 			this.randFunction = randFunction;
@@ -12,19 +21,39 @@ export class DiceRoller {
 		this.maxRollCount = maxRolls;
 	}
 
+	/**
+	 * Parses and returns an representation of a dice roll input string
+	 * @param input The input string to parse
+	 * @returns A RootType object representing the parsed input string
+	 */
 	public parse(input: string): RootType {
 		return parser.parse(input);
 	}
 
+	/**
+	 * Parses and rolls a dice roll input string, returning an object representing the roll
+	 * @param input The input string to parse
+	 * @returns A RollBase object representing the rolled dice input string
+	 */
 	public roll(input: string): RollBase {
 		const root = parser.parse(input);
 		return this.rollType(root);
 	}
 
+	/**
+	 * Parses and rolls a dice roll input string, returning the result as a number
+	 * @param input The input string to parse
+	 * @returns The final number value of the result
+	 */
 	public rollValue(input: string): number {
 		return this.roll(input).value;
 	}
 
+	/**
+	 * Rolls a previously parsed dice roll input string, returning an object representing the roll
+	 * @param parsed A parsed input string to be rolled
+	 * @returns A RollBase object representing the rolled dice input string
+	 */
 	public rollParsed(parsed: RootType): RollBase {
 		return this.rollType(parsed);
 	}
@@ -37,13 +66,13 @@ export class DiceRoller {
 				response = this.rollDiceExpr(input as RollExpressionType);
 				break;
 			case "group":
-				response = this.rollGroup(input as GroupedRollType);
+				response = this.rollGroup(input as GroupedRoll);
 				break;
 			case "die":
 				response = this.rollDie(input as DiceRoll);
 				break;
 			case "expression":
-				response = this.rollExpression(input as NonExpressionType | TermType);
+				response = this.rollExpression(input as MathExpression);
 				break;
 			case "inline":
 				response = this.rollType((input as InlineExpression).expr);
@@ -101,7 +130,7 @@ export class DiceRoller {
 		}
 	}
 
-	private rollGroup(input: GroupedRollType): GroupRoll {
+	private rollGroup(input: GroupedRoll): GroupRoll {
 		let rolls: RollBase[] = input.rolls.map((roll, order) => ({
 			...this.rollType(roll),
 			order,
@@ -137,7 +166,7 @@ export class DiceRoller {
 							...arr,
 							...die.type == "die"
 								? (die as DiceRollResult).rolls
-								: (die as GroupedRoll).dice,
+								: (die as GroupedRollBase).dice,
 						], []);
 
 				dice = applyGroupMods(dice);
@@ -174,10 +203,10 @@ export class DiceRoller {
 				value: 0,
 				order: 0,
 			};
-			rolls = Array.from({length: count.value}, (_, i) => this.generateFateRoll(i));
+			rolls = Array.from({ length: count.value }, (_, i) => this.generateFateRoll(i));
 		} else {
 			die = this.rollType(input.die);
-			rolls = Array.from({length: count.value}, (_, i) => this.generateDiceRoll(die.value, i));
+			rolls = Array.from({ length: count.value }, (_, i) => this.generateDiceRoll(die.value, i));
 		}
 
 		if (input.mods) {
@@ -238,7 +267,7 @@ export class DiceRoller {
 		}
 	}
 
-	private rollExpression(input: RollExpressionType | NonExpressionType | TermType): ExpressionRoll {
+	private rollExpression(input: RollExpressionType | MathExpression): ExpressionRoll {
 		const headRoll = this.rollType(input.head);
 		const rolls = [headRoll];
 		const ops: string[] = [];
@@ -581,7 +610,7 @@ export class DiceRoller {
 		}
 	}
 
-	private successTest(mod: string , target: number, roll: number) {
+	private successTest(mod: string, target: number, roll: number) {
 		switch (mod) {
 			case ">":
 				return roll >= target;
@@ -597,7 +626,7 @@ export class DiceRoller {
 		switch (roll.type) {
 			case "roll":
 				return this.generateDiceRoll((roll as DieRoll).die, order);
-			case "dateroll":
+			case "fateroll":
 				return this.generateFateRoll(order);
 			default:
 				throw new Error(`Cannot do a reroll of a ${roll.type}.`);
@@ -637,51 +666,86 @@ export class DiceRoller {
 type ModMethod = (rolls: DieRollBase[]) => DieRollBase[]
 type GroupModMethod = (rolls: RollBase[]) => RollBase[]
 
+/** The following types of roll can be used */
+type RollType = "number" |
+	"diceexpressionroll" |
+	"expressionroll" |
+	"grouproll" |
+	"fate" |
+	"die" |
+	"roll" |
+	"fateroll";
+
+/** The base class for all die rolls, extended based upon the type property */
 export interface RollBase {
+	/**	Was the roll a success, for target number rolls, e.g. 3d6 > 3 */
 	success: boolean;
-	type: string;
+	/**	The type of roll that this object represents */
+	type: RollType;
+	/**	Is the roll still valid, and included in calculations */
 	valid: boolean;
+	/**	The rolled or calculated value of this roll */
 	value: number;
+	/**	The display label for this roll */
 	label?: string;
+	/**	A property used to maintain ordering of dice rolls within groups */
 	order: number;
 }
 
-interface GroupedRoll extends RollBase {
+/**	An intermediate interface extended for groups of dice */
+interface GroupedRollBase extends RollBase {
+	/** The rolls included as part of this group */
 	dice: RollBase[];
 }
 
-export interface DiceExpressionRoll extends GroupedRoll {
+/**	A representation of a dice expression e.g. '2d20 + 6d6' */
+export interface DiceExpressionRoll extends GroupedRollBase {
 	type: "diceexpressionroll";
-	ops: string[]
+	/** The operations to perform on the rolls */
+	ops: string[];
 }
 
-export interface ExpressionRoll extends GroupedRoll {
+/**	A representation of a mathematic expression e.g. '20 * 17' */
+export interface ExpressionRoll extends GroupedRollBase {
 	type: "expressionroll";
-	ops: string[]
+	/** The operations to perform on the rolls */
+	ops: string[];
 }
 
-export interface GroupRoll extends GroupedRoll {
+/**	A representation of a group of rolls e.g. {4d6,3d6} */
+export interface GroupRoll extends GroupedRollBase {
 	type: "grouproll";
 }
 
+/**	The rolled result of a group of dice e.g. '6d20' */
 export interface DiceRollResult extends RollBase {
+	/** The die this result represents */
 	die: RollBase;
 	type: "die";
+	/** Each roll of the die */
 	rolls: DieRollBase[];
+	/** The number of rolls of the die */
 	count: RollBase;
+	/** Whether this is a match result */
 	matched: boolean;
 }
 
+/**	An intermediate interface extended for individual die rolls (see below) */
 export interface DieRollBase extends RollBase {
+	/** The rolled result of the die */
 	roll: number;
+	/** Whether this roll is a match */
 	matched: boolean;
 }
 
+/**	A roll on a regular die e.g. 'd20' */
 export interface DieRoll extends DieRollBase {
+	/** The die number to be rolled */
 	die: number;
 	type: "roll";
 }
 
+/**	A roll on a fate die e.g. 'dF' */
 export interface FateDieRoll extends DieRollBase {
 	type: "fateroll";
 }
