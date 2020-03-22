@@ -1,7 +1,7 @@
 const parser = require("./diceroll.js");
 import {
-	RootType, DiceRoll, NumberType, InlineExpression, RollExpressionType, MathType, GroupedRoll, SortRollType, SuccessModType,
-	FailureModType, KeepModType, DropModType, ExplodeRoll, CompoundRoll, PenetrateRoll, ReRollMod, ReRollOnceMod, FullRoll, ParsedType, MathExpression
+	RootType, DiceRoll, NumberType, InlineExpression, RollExpressionType, MathType, GroupedRoll, SortRollType, SuccessFailureCritModType,
+	ReRollMod, FullRoll, ParsedType, MathExpression, KeepDropModType, SuccessFailureModType
 } from "./parsedRollTypes";
 import {
 	RollBase, DiceExpressionRoll, GroupRoll, DiceRollResult, DieRollBase, ExpressionRoll, DieRoll, FateDieRoll, GroupedRollBase
@@ -314,13 +314,13 @@ export class DiceRoller {
 		const lookup = (roll: RollBase) => roll.value;
 		switch (mod.type) {
 			case "success":
-				return this.getSuccessMethod(mod as SuccessModType, lookup);
+				return this.getSuccessMethod(mod as SuccessFailureModType, lookup);
 			case "failure":
-				return this.getFailureMethod(mod as FailureModType, lookup);
+				return this.getFailureMethod(mod as SuccessFailureModType, lookup);
 			case "keep":
-				return this.getKeepMethod(mod as KeepModType, lookup);
+				return this.getKeepMethod(mod as KeepDropModType, lookup);
 			case "drop":
-				return this.getDropMethod(mod as DropModType, lookup);
+				return this.getDropMethod(mod as KeepDropModType, lookup);
 			default:
 				throw new Error(`Mod ${mod.type} is not recognised`);
 		}
@@ -334,27 +334,31 @@ export class DiceRoller {
 		const lookup = (roll: DieRollBase) => roll.roll;
 		switch (mod.type) {
 			case "success":
-				return this.getSuccessMethod(mod as SuccessModType, lookup);
+				return this.getSuccessMethod(mod as SuccessFailureCritModType, lookup);
 			case "failure":
-				return this.getFailureMethod(mod as FailureModType, lookup);
+				return this.getFailureMethod(mod as SuccessFailureCritModType, lookup);
+			case "crit":
+				return this.getCritSuccessMethod(mod as SuccessFailureCritModType, lookup);
+			case "critfail":
+				return this.getCritFailureMethod(mod as SuccessFailureCritModType, lookup);
 			case "keep":
 				return (rolls) =>
-					this.getKeepMethod(mod as KeepModType, lookup)(rolls)
+					this.getKeepMethod(mod as KeepDropModType, lookup)(rolls)
 						.sort((a, b) => a.order - b.order);
 			case "drop":
 				return (rolls) =>
-					this.getDropMethod(mod as DropModType, lookup)(rolls)
+					this.getDropMethod(mod as KeepDropModType, lookup)(rolls)
 						.sort((a, b) => a.order - b.order);
 			case "explode":
-				return this.getExplodeMethod((mod as ExplodeRoll));
+				return this.getExplodeMethod((mod as ReRollMod));
 			case "compound":
-				return this.getCompoundMethod((mod as CompoundRoll));
+				return this.getCompoundMethod((mod as ReRollMod));
 			case "penetrate":
-				return this.getPenetrateMethod((mod as PenetrateRoll));
+				return this.getPenetrateMethod((mod as ReRollMod));
 			case "reroll":
 				return this.getReRollMethod((mod as ReRollMod));
 			case "rerollOnce":
-				return this.getReRollOnceMethod((mod as ReRollOnceMod));
+				return this.getReRollOnceMethod((mod as ReRollMod));
 			default:
 				throw new Error(`Mod ${mod.type} is not recognised`);
 		}
@@ -366,7 +370,45 @@ export class DiceRoller {
 		return rolls;
 	}
 
-	private getSuccessMethod<T extends RollBase>(mod: SuccessModType, lookup: (roll: T) => number) {
+	private getCritSuccessMethod<T extends DieRollBase>(mod: SuccessFailureCritModType, lookup: (roll: T) => number) {
+		const exprResult = this.rollType(mod.expr);
+
+		return (rolls: T[]) => {
+			return rolls.map((roll) => {
+				if (!roll.valid) { return roll; }
+				if (roll.type !== "roll") return roll;
+
+				if (this.successTest(mod.mod, exprResult.value, lookup(roll))) {
+					if (!roll.success) {
+						(roll as unknown as DieRoll).critical = "success";
+					}
+				}
+
+				return roll;
+			});
+		}
+	}
+
+	private getCritFailureMethod<T extends DieRollBase>(mod: SuccessFailureCritModType, lookup: (roll: T) => number) {
+		const exprResult = this.rollType(mod.expr);
+
+		return (rolls: T[]) => {
+			return rolls.map((roll) => {
+				if (!roll.valid) { return roll; }
+				if (roll.type !== "roll") return roll;
+
+				if (this.successTest(mod.mod, exprResult.value, lookup(roll))) {
+					if (!roll.success) {
+						(roll as unknown as DieRoll).critical = "failure";
+					}
+				}
+
+				return roll;
+			});
+		}
+	}
+
+	private getSuccessMethod<T extends RollBase>(mod: SuccessFailureCritModType, lookup: (roll: T) => number) {
 		const exprResult = this.rollType(mod.expr);
 
 		return (rolls: T[]) => {
@@ -386,7 +428,7 @@ export class DiceRoller {
 		}
 	}
 
-	private getFailureMethod<T extends RollBase>(mod: FailureModType, lookup: (roll: T) => number) {
+	private getFailureMethod<T extends RollBase>(mod: SuccessFailureCritModType, lookup: (roll: T) => number) {
 		const exprResult = this.rollType(mod.expr);
 
 		return (rolls: T[]) => {
@@ -406,7 +448,7 @@ export class DiceRoller {
 		}
 	}
 
-	private getKeepMethod<T extends RollBase>(mod: KeepModType, lookup: (roll: T) => number) {
+	private getKeepMethod<T extends RollBase>(mod: KeepDropModType, lookup: (roll: T) => number) {
 		const exprResult = this.rollType(mod.expr);
 
 		return (rolls: T[]) => {
@@ -437,7 +479,7 @@ export class DiceRoller {
 		}
 	}
 
-	private getDropMethod<T extends RollBase>(mod: DropModType, lookup: (roll: T) => number) {
+	private getDropMethod<T extends RollBase>(mod: KeepDropModType, lookup: (roll: T) => number) {
 		const exprResult = this.rollType(mod.expr);
 
 		return (rolls: T[]) => {
@@ -462,7 +504,7 @@ export class DiceRoller {
 		}
 	}
 
-	private getExplodeMethod(mod: ExplodeRoll) {
+	private getExplodeMethod(mod: ReRollMod) {
 		const targetValue = mod.target
 			? this.rollType(mod.target.value)
 			: null;
@@ -496,7 +538,7 @@ export class DiceRoller {
 		}
 	}
 
-	private getCompoundMethod(mod: CompoundRoll) {
+	private getCompoundMethod(mod: ReRollMod) {
 		const targetValue = mod.target
 			? this.rollType(mod.target.value)
 			: null;
@@ -533,7 +575,7 @@ export class DiceRoller {
 		}
 	}
 
-	private getPenetrateMethod(mod: PenetrateRoll) {
+	private getPenetrateMethod(mod: ReRollMod) {
 		const targetValue = mod.target
 			? this.rollType(mod.target.value)
 			: null;
@@ -591,7 +633,7 @@ export class DiceRoller {
 		}
 	}
 
-	private getReRollOnceMethod(mod: ReRollOnceMod) {
+	private getReRollOnceMethod(mod: ReRollMod) {
 		const targetMethod = mod.target
 			? this.successTest.bind(null, mod.target.mod, this.rollType(mod.target.value).value)
 			: this.successTest.bind(null, "=", 1);
@@ -639,7 +681,14 @@ export class DiceRoller {
 	private generateDiceRoll(die: number, order: number): DieRoll {
 		const roll = Math.floor(this.randFunction() * die) + 1;
 
+		const critical = roll === die
+			? "success"
+			: roll === 1
+				? "failure"
+				: null;
+
 		return {
+			critical,
 			die,
 			matched: false,
 			order,

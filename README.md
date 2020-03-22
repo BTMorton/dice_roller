@@ -296,10 +296,11 @@ An intermediate interface extended for individual die rolls (see below). This in
 
 A roll on a regular die e.g. 'd20'. This interface extends [`DieRollBase`](#DieRollBase).
 
-| Property | Type     | Description                                   |
-|----------|----------|-----------------------------------------------|
-| die      | number   | The die number to be rolled.                  |
-| type     | `"roll"` | The type of roll that this object represents. |
+| Property | Type                               | Description                                                    |
+|----------|------------------------------------|----------------------------------------------------------------|
+| die      | number                             | The die number to be rolled.                                   |
+| type     | `"roll"`                           | The type of roll that this object represents.                  |
+| critical | `"success"`, `"failure"` or `null` | If this role is a critical success or failure (for rendering). |
 
 #### `FateDieRoll`
 
@@ -308,7 +309,6 @@ A roll on a fate die e.g. 'dF'. This interface extends [`DieRollBase`](#DieRollB
 | Property | Type         | Description                                   |
 |----------|--------------|-----------------------------------------------|
 | type     | `"fateroll"` | The type of roll that this object represents. |
-
 
 ###	Parsed Roll Output
 
@@ -319,19 +319,21 @@ The following interfaces are exposed by the library as a reresentation of the pa
 An enum of the valid types of roll. The possible values are:
 - [`"number"`](#NumberType)
 - [`"inline"`](#InlineExpression)
-- [`"success"`](#SuccessModType)
-- [`"failure"`](#FailureModType)
+- [`"success"`](#SuccessFailureCritModType)
+- [`"failure"`](#SuccessFailureCritModType)
+- [`"crit"`](#SuccessFailureCritModType)
+- [`"critfail"`](#SuccessFailureCritModType)
 - [`"match"`](#MatchModType)
-- [`"keep"`](#KeepModType)
-- [`"drop"`](#DropModType)
+- [`"keep"`](#KeepDropModType)
+- [`"drop"`](#KeepDropModType)
 - [`"group"`](#GroupedRoll)
 - [`"diceExpression"`](#RollExpressionType)
 - [`"sort"`](#SortRollType)
-- [`"explode"`](#ExplodeRoll)
-- [`"compound"`](#CompoundRoll)
-- [`"penetrate"`](#PenetrateRoll)
+- [`"explode"`](#ReRollMod)
+- [`"compound"`](#ReRollMod)
+- [`"penetrate"`](#ReRollMod)
 - [`"reroll"`](#ReRollMod)
-- [`"rerollOnce"`](#ReRollOnceMod)
+- [`"rerollOnce"`](#ReRollMod)
 - [`"target"`](#TargetMod)
 - [`"die"`](#DiceRoll)
 - [`"fate"`](#FateExpr)
@@ -391,9 +393,9 @@ This object represents a grouped roll with an optional modifier. This object ext
 **Example**
 > `{4d6+3d8}kh1`
 
-| Property | Type                                                                                                                                                  | Description                                      |
-|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| mods     | An array of: [`KeepModType`](#KeepModType), [`DropModType`](#DropModType), [`SuccessModType`](#SuccessModType) or [`FailureModType`](#FailureModType) | The modifiers to be applied to the grouped roll. |
+| Property | Type                                                                                                  | Description                                      |
+|----------|-------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| mods     | An array of: [`KeepDropModType`](#KeepDropModType), [`SuccessFailureModType`](#SuccessFailureModType) | The modifiers to be applied to the grouped roll. |
 
 #### `ConditionCheck`
 
@@ -402,31 +404,35 @@ The available values for target condition checking:
 - `"<"`
 - `"="`
 
-#### `SuccessModType`
+#### `SuccessFailureCritModType`
 
-An object representing a success type modifier. This object extends the [`ParsedType`](#ParsedType) interface.
-
-**Example**
-> `3d6>3`
-
-| Property | Type                                | Description                                       |
-|----------|-------------------------------------|---------------------------------------------------|
-| type     | `"success"`                         | The type of parsed item this object represents.   |
-| mod      | [`ConditionCheck`](#ConditionCheck) | The check type to use for the condition.          |
-| expr     | [`RollExpression`](#RollExpression) | An expression representing the success condition. |
-
-#### `FailureModType`
-
-An object representing a failure type modifier. This object extends the [`ParsedType`](#ParsedType) interface.
+An object representing a success test modifier. This object extends the [`ParsedType`](#ParsedType) interface.
+A `"success"` or `"failure"` modifier converts the result into a success type result which returns the number of rolls that meet the target.
+A `"crit"` or `"critfail"` modifier tests the roll for whether or not the roll should be displayed as a critical success or critical failure.
 
 **Example**
-> `3d6f>3`
+> Success: `3d6>3`
+> Failure: `3d6f<3`
 
-| Property | Type                                | Description                                       |
-|----------|-------------------------------------|---------------------------------------------------|
-| type     | `"failure"`                         | The type of parsed item this object represents.   |
-| mod      | [`ConditionCheck`](#ConditionCheck) | The check type to use for the condition.          |
-| expr     | [`RollExpression`](#RollExpression) | An expression representing the failure condition. |
+| Property | Type                                               | Description                                                     |
+|----------|----------------------------------------------------|-----------------------------------------------------------------|
+| type     | `"success"`, `"failure"`, `"crit"` or `"critfail"` | The type of parsed item this object represents.                 |
+| mod      | [`ConditionCheck`](#ConditionCheck)                | The check type to use for the condition.                        |
+| expr     | [`RollExpression`](#RollExpression)                | An expression representing the success condition.               |
+
+#### `SuccessFailureModType`
+
+Equivalent to the [`SuccessFailureCritModType`](#SuccessFailureCritModType) but only supporting "success" and "failure" modifiers. This object extends the [`SuccessFailureCritModType`](#SuccessFailureCritModType) interface.
+
+**Example**
+> Success: `3d6>3`
+> Failure: `3d6f<3`
+
+| Property | Type                                | Description                                                     |
+|----------|-------------------------------------|-----------------------------------------------------------------|
+| type     | `"success"` or `"failure"`          | The type of parsed item this object represents.                 |
+| mod      | [`ConditionCheck`](#ConditionCheck) | The check type to use for the condition.                        |
+| expr     | [`RollExpression`](#RollExpression) | An expression representing the success condition.               |
 
 #### `MatchModType`
 
@@ -456,38 +462,19 @@ Additional arguments can be specified that increase the required number of match
 | mod?     | ConditionCheck | The check type to use for the match condition, if specified. This field is optional.                   |
 | expr?    | RollExpression | An expression representing the match condition, if specified. This field is optional.                  |
 
-#### `KeepDropOptions`
+#### `KeepDropModType`
 
-The available values keep/drop modifier specifying whether to use highest or lowest rolls. Possible values:
-- h
-- l
-
-#### `KeepModType`
-
-An object representing a keep modifier, specifying a number of dice rolls to keep, either the highest or lowest rolls. This object extends the [`ParsedType`](#ParsedType) interface.
+An object representing a keep or drop modifier, specifying a number of dice rolls to keep or drop, either the highest or lowest rolls. This object extends the [`ParsedType`](#ParsedType) interface.
 
 **Example**
-> `2d20kh1`
+> Keep: `2d20kh1`
+> Drop: `2d20dl1`
 
-| Property | Type                                          | Description                                                                                                                          |
-|----------|-----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| type     | `"keep"`                                      | The type of parsed item this object represents.                                                                                      |
-| highlow  | [`KeepDropOptions`](#KeepDropOptions) or null | Whether to keep the highest or lowest roll.                                                                                          |
-| expr     | [`RollExpression`](#RollExpression)           | An expression representing the number of rolls to keep. This property defaults to 1 as a [`NumberType`](#NumberType). Example: `2d6` |
-
-#### `DropModType`
-
-An object representing a drop modifier, specifying a number of dice rolls to drop, either the highest or lowest rolls. This object extends the [`ParsedType`](#ParsedType) interface.
-
-**Example**
-> `2d20dl1`
-
-
-| Property | Type                                          | Description                                                                                                                          |
-|----------|-----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| type     | `"drop"`                                      | The type of parsed item this object represents.                                                                                      |
-| highlow  | [`KeepDropOptions`](#KeepDropOptions) or null | Whether to keep the highest or lowest roll.                                                                                          |
-| expr     | [`RollExpression`](#RollExpression)           | An expression representing the number of rolls to drop. This property defaults to 1 as a [`NumberType`](#NumberType). Example: `2d6` |
+| Property | Type                                | Description                                                                                                                               |
+|----------|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| type     | `"keep"` or `"drop"`                | The type of parsed item this object represents.                                                                                           |
+| highlow  | `"h"`, `"l"` or null                | Whether to keep/drop the highest or lowest roll.                                                                                          |
+| expr     | [`RollExpression`](#RollExpression) | An expression representing the number of rolls to keep/drop. This property defaults to 1 as a [`NumberType`](#NumberType). Example: `2d6` |
 
 #### `GroupedRoll`
 
@@ -533,12 +520,12 @@ An object representing a roll including the dice roll, and any modifiers. This o
 **Example**
 > `2d6kh1`
 
-| Property | Type                                                                                                                                                                                                                                         | Description                                                             |
-|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
-| mods?    | An array of: [`CompoundRoll`](#CompoundRoll), [`PenetrateRoll`](#PenetrateRoll), [`ExplodeRoll`](#ExplodeRoll), [`ReRollOnceMod`](#ReRollOnceMod), [`ReRollMod`](#ReRollMod), [`DropModType`](#DropModType) or [`KeepModType`](#KeepModType) | Any modifiers attached to the roll. This property is optional.          |
-| targets? | An array of: [`SuccessModType`](#SuccessModType) or [`FailureModType`](#FailureModType)                                                                                                                                                      | Any success or failure targets for the roll. This property is optional. |
-| match?   | [`MatchModTyp`](#MatchModTyp)                                                                                                                                                                                                                | Any match modifiers for the roll. This property is optional.            |
-| sort?    | [`SortRollType`](#SortRollType)                                                                                                                                                                                                              | Any sort operations to apply to the roll. This property is optional.    |
+| Property | Type                                                                            | Description                                                             |
+|----------|---------------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| mods?    | An array of: [`ReRollMod`](#ReRollMod) or [`KeepDropModType`](#KeepDropModType) | Any modifiers attached to the roll. This property is optional.          |
+| targets? | An array of: [`SuccessFailureCritModType`](#SuccessFailureCritModType)          | Any success or failure targets for the roll. This property is optional. |
+| match?   | [`MatchModTyp`](#MatchModTyp)                                                   | Any match modifiers for the roll. This property is optional.            |
+| sort?    | [`SortRollType`](#SortRollType)                                                 | Any sort operations to apply to the roll. This property is optional.    |
 
 #### `SortRollType`
 
@@ -552,65 +539,22 @@ A sort operation to apply to a roll. This object extends the [`ParsedType`](#Par
 | type     | `"sort"` | The type of parsed item this object represents. |
 | asc      | boolean  | Whether to sort ascending or descending.        |
 
-#### `ExplodeRoll`
+#### `ReRollMod`
 
-An explode operation to apply to a roll, re-rolling any die that match the target, continuing if the new die matches. This object extends the [`ParsedType`](#ParsedType) interface.
+An object representing a re-roll operation to apply to a roll. Can be one of the following types:
+- `"explode"`: re-rolls any dice that meet the target, continuing if the new roll matches
+- `"compound"`: re-rolls any dice that meet the target, continuing if the new roll matches and adding the results into a single roll
+- `"penetrate"`: re-rolls any dice that meet the target subtracting 1 from the new value, continuing if the new roll matches
+- `"reroll"`: re-rolls a die as long as it meets the target, keeping the final roll
+- `"rerollOnce"`: re-rolls a die once if it meets the target, keeping the new roll
 
 **Example**
 > `2d6!`
 
-| Property | Type                      | Description                                            |
-|----------|---------------------------|--------------------------------------------------------|
-| type     | `"explode"`               | The type of parsed item this object represents.        |
-| target   | [`TargetMod`](#TargetMod) | The target modifier to compare the roll value against. |
-
-#### `CompoundRoll`
-
-A compound operation to apply to a roll, similar to an exploding roll but adding all values together. This object extends the [`ParsedType`](#ParsedType) interface.
-
-**Example**
-> `2d6!!`
-
-| Property | Type                      | Description                                            |
-|----------|---------------------------|--------------------------------------------------------|
-| type     | `"compound"`              | The type of parsed item this object represents.        |
-| target   | [`TargetMod`](#TargetMod) | The target modifier to compare the roll value against. |
-
-#### `PenetrateRoll`
-
-A penetrate operation to apply to a roll, similar to an exploding roll, but with each subsequent dice have 1 substracted from the roll. This object extends the [`ParsedType`](#ParsedType) interface.
-
-**Example**
-> `2d6!p`
-
-| Property | Type                      | Description                                            |
-|----------|---------------------------|--------------------------------------------------------|
-| type     | `"penetrate"`             | The type of parsed item this object represents.        |
-| target   | [`TargetMod`](#TargetMod) | The target modifier to compare the roll value against. |
-
-#### `ReRollMod`
-
-A re-roll operation to apply to a roll, re-rolling any die that meets the target until a roll doesn't, keeping the final roll. This object extends the [`ParsedType`](#ParsedType) interface.
-
-**Example**
-> `2d6r3`
-
-| Property | Type                      | Description                                            |
-|----------|---------------------------|--------------------------------------------------------|
-| type     | `"reroll"`                | The type of parsed item this object represents.        |
-| target   | [`TargetMod`](#TargetMod) | The target modifier to compare the roll value against. |
-
-#### `ReRollOnceMod`
-
-A re-roll operation to apply to a roll, re-rolling any die that meets the target once, keeping the new roll. This object extends the [`ParsedType`](#ParsedType) interface.
-
-**Example**
-> `2d6ro3`
-
-| Property | Type                      | Description                                            |
-|----------|---------------------------|--------------------------------------------------------|
-| type     | `"rerollOnce"`            | The type of parsed item this object represents.        |
-| target   | [`TargetMod`](#TargetMod) | The target modifier to compare the roll value against. |
+| Property | Type                                                           | Description                                            |
+|----------|----------------------------------------------------------------|--------------------------------------------------------|
+| type     | `"explode"`, `compound`, `penetrate`, `reroll` or `rerollOnce` | The type of parsed item this object represents.        |
+| target   | [`TargetMod`](#TargetMod)                                      | The target modifier to compare the roll value against. |
 
 #### `TargetMod`
 

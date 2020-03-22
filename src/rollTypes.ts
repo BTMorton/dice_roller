@@ -75,6 +75,7 @@ export interface DieRoll extends DieRollBase {
 	/** The die number to be rolled */
 	die: number;
 	type: "roll";
+	critical: "success" | "failure" | null;
 }
 
 /**	A roll on a fate die e.g. 'dF' */

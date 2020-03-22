@@ -119,6 +119,10 @@ export class DiscordRollRenderer {
 			rollDisplay = `**${roll.roll}**`;
 		} else if (roll.success && roll.value === -1) {
 			rollDisplay = `*${roll.roll}*`;
+		} else if (!roll.success && roll.critical == "success") {
+			rollDisplay = `**${roll.roll}**`;
+		} else if (!roll.success && roll.critical == "failure") {
+			rollDisplay = `*${roll.roll}*`;
 		}
 
 		if (roll.matched) {

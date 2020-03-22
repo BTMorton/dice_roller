@@ -19,7 +19,9 @@ export type ParsedObjectType = "number"
 	| "fate"
 	| "expression"
 	| "expression"
-	| "math";
+	| "math"
+	| "crit"
+	| "critfail";
 
 /** The base interface for all parsed types */
 export interface ParsedType {
@@ -64,34 +66,30 @@ export type AnyRoll = GroupedRoll | FullRoll | NumberType;
  */
 export interface ModGroupedRoll extends RootType {
 	/** The modifiers to be applied to the grouped roll */
-	mods?: (KeepModType | DropModType | SuccessModType | FailureModType)[];
+	mods?: (KeepDropModType | SuccessFailureModType)[];
 }
 
 /** The available values for target condition checking */
 export type ConditionCheck = ">" | "<" | "=";
 
 /**
- * A success type modifier
+ * A success test modifier.
+ * A `"success"` or `"failure"` modifier converts the result into a success type result which returns the number of rolls that meet the target.
+ * A `"crit"` or `"critfail"` modifier tests the roll for whether or not the roll should be displayed as a critical success or critical failure.
  * @example 3d6>3
+ * @example 3d6f<3
  */
-export interface SuccessModType extends ParsedType {
-	type: "success";
+export interface SuccessFailureCritModType extends ParsedType {
+	type: "success" | "failure" | "crit" | "critfail";
 	/** The check type to use for the condition */
 	mod: ConditionCheck;
-	/** An expression representing the success condition */
+	/** An expression representing the success or failure condition */
 	expr: RollExpression;
 }
 
-/**
- * A failure type modifier
- * @example 3d6f>3
- */
-export interface FailureModType extends ParsedType {
-	type: "failure";
-	/** The check type to use for the condition */
-	mod: ConditionCheck;
-	/** An expression representing the failure condition */
-	expr: RollExpression;
+/** Equivalent to the `SuccessFailureCritModType` but only supporting "success" and "failure" */
+export interface SuccessFailureModType extends SuccessFailureCritModType {
+	type: "success" | "failure";
 }
 
 /**
@@ -126,35 +124,16 @@ export interface MatchModType extends ParsedType {
 	expr?: RollExpression;
 }
 
-/** The available values keep/drop modifier specifying whether to use highest or lowest rolls */
-export type KeepDropOptions = "h" | "l";
-
 /**
- * A keep modifier specifies a number of dice rolls to keep, either the highest or lowest rolls
+ * A keep or drop modifier specifies a number of dice rolls to keep or drop, either the highest or lowest rolls
  * @example 2d20kh1
  */
-export interface KeepModType extends ParsedType {
-	type: "keep";
-	/** Whether to keep the highest or lowest roll */
-	highlow: KeepDropOptions | null;
+export interface KeepDropModType extends ParsedType {
+	type: "keep" | "drop";
+	/** Whether to keep/drop the highest or lowest roll */
+	highlow: "h" | "l" | null;
 	/**
 	 * An expression representing the number of rolls to keep
-	 * @example 2d6
-	 * @default 1 as a `NumberType`
-	 */
-	expr: RollExpression;
-}
-
-/**
- * A drop modifier specifies a number of dice rolls to drop, either the highest or lowest rolls
- * @example 2d20dl1
- */
-export interface DropModType extends ParsedType {
-	type: "drop";
-	/** Whether to keep the highest or lowest roll */
-	highlow: KeepDropOptions | null;
-	/**
-	 * An expression representing the number of rolls to drop
 	 * @example 2d6
 	 * @default 1 as a `NumberType`
 	 */
@@ -194,9 +173,9 @@ export type RollOrExpression = FullRoll | Expression;
  */
 export interface FullRoll extends DiceRoll {
 	/** Any modifiers attached to the roll */
-	mods?: (CompoundRoll | PenetrateRoll | ExplodeRoll | ReRollOnceMod | ReRollMod | DropModType | KeepModType)[];
+	mods?: (ReRollMod | KeepDropModType)[];
 	/** Any success or failure targets for the roll */
-	targets?: (SuccessModType | FailureModType)[]
+	targets?: (SuccessFailureCritModType)[]
 	/** Any match modifiers for the roll */
 	match?: MatchModType
 	/** Any sort operations to apply to the roll */
@@ -214,51 +193,16 @@ export interface SortRollType extends ParsedType {
 }
 
 /**
- * An explode operation to apply to a roll, re-rolling any die that match the target, continuing if the new die matches
+ * A re-roll operation to apply to a roll. Can be one of the following types:
+ * - `explode`: re-rolls any dice that meet the target, continuing if the new roll matches
+ * - `compound`: re-rolls any dice that meet the target, continuing if the new roll matches and adding the results into a single roll
+ * - `penetrate`: re-rolls any dice that meet the target subtracting 1 from the new value, continuing if the new roll matches
+ * - `reroll`: re-rolls a die as long as it meets the target, keeping the final roll
+ * - `rerollOnce`: re-rolls a die once if it meets the target, keeping the new roll
  * @example 2d6!
  */
-export interface ExplodeRoll extends ParsedType {
-	type: "explode",
-	/** The target modifier to compare the roll value against */
-	target: TargetMod
-}
-
-/**
- * A compound operation to apply to a roll, similar to an exploding roll but adding all values together
- * @example 2d6!!
- */
-export interface CompoundRoll extends ParsedType {
-	type: "compound",
-	/** The target modifier to compare the roll value against */
-	target: TargetMod
-}
-
-/**
- * A penetrate operation to apply to a roll, similar to an exploding roll, but with each subsequent dice have 1 substracted from the roll
- * @example 2d6!p
- */
-export interface PenetrateRoll extends ParsedType {
-	type: "penetrate",
-	/** The target modifier to compare the roll value against */
-	target: TargetMod
-}
-
-/**
- * A re-roll operation to apply to a roll, re-rolling any die that meets the target until a roll doesn't, keeping the final roll
- * @example 2d6r3
- */
 export interface ReRollMod extends ParsedType {
-	type: "reroll",
-	/** The target modifier to compare the roll value against */
-	target: TargetMod
-}
-
-/**
- * A re-roll operation to apply to a roll, re-rolling any die that meets the target once, keeping the new roll
- * @example 2d6ro3
- */
-export interface ReRollOnceMod extends ParsedType {
-	type: "rerollOnce",
+	type: "explode" | "compound" | "penetrate" | "reroll" | "rerollOnce",
 	/** The target modifier to compare the roll value against */
 	target: TargetMod
 }

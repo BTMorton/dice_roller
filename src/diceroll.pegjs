@@ -67,6 +67,22 @@ FailureMod = "f" mod:(">"/"<"/"=")? expr:RollExpr {
 	}
 }
 
+CriticalSuccessMod = "cs" mod:(">"/"<"/"=")? expr:RollExpr {
+	return {
+		type: "crit",
+		mod,
+		expr,
+	}
+}
+
+CriticalFailureMod = "cf" mod:(">"/"<"/"=")? expr:RollExpr {
+	return {
+		type: "critfail",
+		mod,
+		expr,
+	}
+}
+
 MatchTarget = mod:(">"/"<"/"=") expr:RollExpr {
 	return {
 		mod,
@@ -141,7 +157,7 @@ FullRoll = roll:TargetedRoll _ label:Label? {
 	return roll;
 }
 
-TargetedRoll = head:RolledModRoll mods:(DropMod / KeepMod / SuccessMod / FailureMod)* match:MatchMod? sort:(SortAscMod / SortDescMod)? {
+TargetedRoll = head:RolledModRoll mods:(DropMod / KeepMod / SuccessMod / FailureMod / CriticalFailureMod / CriticalSuccessMod)* match:MatchMod? sort:(SortAscMod / SortDescMod)? {
 	const targets = mods.filter((mod) => ["success", "failure"].includes(mod.type));
 	mods = mods.filter((mod) => !targets.includes(mod));
 
