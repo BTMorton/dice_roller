@@ -1,16 +1,16 @@
 import * as dist from "../dist/index";
 
 const testRolls: [string, number][] = [
-	["d20+5", 1+5],
-	["3d6+2", 3+2],
-	["2d6+5 + d8", 2+5+1],
-	["1d20+5", 1+5],
-	["1d20+5 Roll for Initiative", 1+5],
-	["1d20+5 \\ +5 Roll for Initiative", 1+5],
-	["2d20+5[Fire Damage] + 3d6+5[Ice Damage]", 2+5+3+5],
-	["2d10+2d6[crit]+5 Critical Hit!", 2+2+5],
+	["d20+5", 1 + 5],
+	["3d6+2", 3 + 2],
+	["2d6+5 + d8", 2 + 5 + 1],
+	["1d20+5", 1 + 5],
+	["1d20+5 Roll for Initiative", 1 + 5],
+	["1d20+5 \\ +5 Roll for Initiative", 1 + 5],
+	["2d20+5[Fire Damage] + 3d6+5[Ice Damage]", 2 + 5 + 3 + 5],
+	["2d10+2d6[crit]+5 Critical Hit!", 2 + 2 + 5],
 	["[[2d6]]d5", 2],
-	["5+3", 5+3],
+	["5+3", 5 + 3],
 	["3d6!", 3],
 	["3d6!>4", 3],
 	["3d6!3", 3],
@@ -46,6 +46,15 @@ const testRolls: [string, number][] = [
 	["4d6mt5", 0],
 	["4d6mt3>2", 0],
 	["4d6mt4<2", 1],
+	["floor(7/2)", 3],
+	["ceil(7/2)", 4],
+	["round(7/3)", 2],
+	["round(8/3)", 3],
+	["abs(7)", 7],
+	["abs(-7)", 7],
+	["floor( 5 / 2d6 ) + ceil( (3d6 + 7d2) / 4 ) - 2d6", 3],
+	["16 % 3", 1],
+	["3 ** 2", 9],
 ];
 
 const roller = new dist.DiceRoller(() => 0);

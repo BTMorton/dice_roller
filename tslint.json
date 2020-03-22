@@ -1,0 +1,38 @@
+{
+	"extends": [
+		"tslint:recommended"
+	],
+	"rules": {
+		"curly": {
+			"options": "ignore-same-line"
+		},
+		"indent": {
+			"options": "tabs"
+		},
+		"max-line-length": false,
+		"member-ordering": {
+			"options": {
+				"order": "fields-first"
+			}
+		},
+		"no-duplicate-variable": true,
+		"no-inferrable-types": true,
+		"no-console": [
+			true,
+			"log",
+			"info",
+			"trace",
+			"debug",
+			"time",
+			"timeEnd"
+		],
+		"variable-name": {
+			"options": [
+				"ban-keywords",
+				"check-format",
+				"allow-leading-underscore",
+				"allow-pascal-case"
+			]
+		}
+	}
+}

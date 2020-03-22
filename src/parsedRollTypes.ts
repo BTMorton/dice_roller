@@ -21,7 +21,8 @@ export type ParsedObjectType = "number"
 	| "expression"
 	| "math"
 	| "crit"
-	| "critfail";
+	| "critfail"
+	| "mathfunction";
 
 /** The base interface for all parsed types */
 export interface ParsedType {
@@ -158,7 +159,7 @@ export interface RollExpressionType extends RootType {
 	head: RollOrExpression,
 	type: "diceExpression",
 	/** The operations to apply to the initial roll or expression */
-	ops: MathType[],
+	ops: MathType<RollOrExpression, "+" | "-">[],
 }
 
 /** A combination of a complex roll expression, a roll, or a math expression. Used as a helper for type combinations */
@@ -259,12 +260,25 @@ export interface MathExpression extends RootType {
 /**
  * A representation of an operation to be applied and the value to apply it to
  * @param TailType The type of the second value used in the operation
+ * @param OpValues The possible operations that can be used
  * @example + 3d6 (as part of 2d6 + 3d6)
  */
-export interface MathType<TailType = RollOrExpression> extends ParsedType {
+export interface MathType<TailType, OpValues = ("+" | "-" | "*" | "/" | "%" | "**")> extends ParsedType {
 	type: "math";
 	/** The math operation to perform */
-	op: "+" | "-" | "*" | "/";
+	op: OpValues;
 	/** The second value to use in the operation */
 	tail: TailType;
+}
+
+/**
+ * A representation of a math function to be applied and the expression to apply it to
+ * @example floor(3d6 / 2d4)
+ */
+export interface MathFunctionExpression extends RootType {
+	type: "mathfunction";
+	/** The function to be applied */
+	op: "floor" | "ceil" | "round" | "abs";
+	/** The expression to apply the function on */
+	expr: AnyRoll;
 }

@@ -298,7 +298,7 @@ AddSubExpression = head:MultDivExpression tail:(_ ("+" / "-") _ MultDivExpressio
 	};
 }
 
-MultDivExpression = head:RollOrBrackets tail:(_ ("*" / "/") _ RollOrBrackets)* {
+MultDivExpression = head:ModExpoExpression tail:(_ ("*" / "/") _ ModExpoExpression)* {
 	if (tail.length == 0) {
 		return head;
 	}
@@ -317,9 +317,38 @@ MultDivExpression = head:RollOrBrackets tail:(_ ("*" / "/") _ RollOrBrackets)* {
 	};
 }
 
-RollOrBrackets = AnyRoll / BracketExpression
+ModExpoExpression = head:FunctionOrRoll tail:(_ ("**" / "%") _ FunctionOrRoll)* {
+	if (tail.length == 0) {
+		return head;
+	}
 
-Integer "integer" = [0-9]+ {
+	const ops = tail
+		.map((element) => ({
+			type: "math",
+			op: element[1],
+			tail: element[3],
+		}));
+
+	return {
+		head,
+		type: "expression",
+		ops,
+	};
+}
+
+MathFunction = "floor" / "ceil" / "round" / "abs"
+
+MathFnExpression = op:MathFunction _ "(" _ expr:AddSubExpression _ ")" {
+	return {
+		type: "mathfunction",
+		op,
+		expr
+	};
+}
+
+FunctionOrRoll = MathFnExpression / AnyRoll / BracketExpression
+
+Integer "integer" = "-"? [0-9]+ {
 	const num = parseInt(text(), 10);
 	return {
 		type: "number",

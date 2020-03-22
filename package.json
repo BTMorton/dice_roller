@@ -1,53 +1,54 @@
 {
-  "name": "dice-roller-parser",
-  "version": "0.1.2",
-  "description": "A javascript dice roller that parses roll20 format strings and generates rolled outputs",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "typings": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "npm run clean && pegjs src/diceroll.pegjs && webpack",
-    "clean": "rimraf dist/ src/diceroll.js",
-    "test": "jest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/BTMorton/dice_roller.git"
-  },
-  "keywords": [
-    "dice",
-    "roller",
-    "roll",
-    "roll20",
-    "rpg",
-    "trpg",
-    "tabletop",
-    "dnd",
-    "d&d",
-    "dungeons",
-    "dragons",
-    "pathfinder"
-  ],
-  "author": "Ben Morton <ben.morton91@gmail.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/BTMorton/dice_roller/issues"
-  },
-  "homepage": "https://github.com/BTMorton/dice_roller#readme",
-  "devDependencies": {
-    "@types/jest": "^25.1.4",
-    "@types/node": "^13.9.2",
-    "jest": "^25.1.0",
-    "pegjs": "^0.10.0",
-    "rimraf": "^3.0.2",
-    "ts-jest": "^25.2.1",
-    "ts-loader": "^6.2.1",
-    "typescript": "^3.8.3",
-    "webpack": "^4.42.0",
-    "webpack-cli": "^3.3.11"
-  }
+	"name": "dice-roller-parser",
+	"version": "0.1.2",
+	"description": "A javascript dice roller that parses roll20 format strings and generates rolled outputs",
+	"main": "dist/index.js",
+	"module": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"typings": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "npm run clean && pegjs src/diceroll.pegjs && tslint -c tslint.json --project tsconfig.json && webpack",
+		"clean": "rimraf dist/ src/diceroll.js",
+		"test": "jest"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/BTMorton/dice_roller.git"
+	},
+	"keywords": [
+		"dice",
+		"roller",
+		"roll",
+		"roll20",
+		"rpg",
+		"trpg",
+		"tabletop",
+		"dnd",
+		"d&d",
+		"dungeons",
+		"dragons",
+		"pathfinder"
+	],
+	"author": "Ben Morton <ben.morton91@gmail.com>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/BTMorton/dice_roller/issues"
+	},
+	"homepage": "https://github.com/BTMorton/dice_roller#readme",
+	"devDependencies": {
+		"@types/jest": "^25.1.4",
+		"@types/node": "^13.9.2",
+		"jest": "^25.1.0",
+		"pegjs": "^0.10.0",
+		"rimraf": "^3.0.2",
+		"ts-jest": "^25.2.1",
+		"ts-loader": "^6.2.1",
+		"tslint": "^6.1.0",
+		"typescript": "^3.8.3",
+		"webpack": "^4.42.0",
+		"webpack-cli": "^3.3.11"
+	}
 }

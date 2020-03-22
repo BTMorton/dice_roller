@@ -92,9 +92,10 @@ roller.maxRollCount = 75;
 #### Class Usage
 
 Once the `DiceRoller` class has been constructed, there are three options for performing a dice roll:
-- Getting a roll result directly
-- Generate an object to represent the dice roll
-- Just parse the input and add your own rolling logic
+
+-   Getting a roll result directly
+-   Generate an object to represent the dice roll
+-   Just parse the input and add your own rolling logic
 
 ##### Getting a direct roll result
 
@@ -127,7 +128,6 @@ See the [roll result output](#roll-result-output) in the [output types](#output-
 ##### Just parse the value
 
 The `parse` method takes a dice string input, parses it and returns a representation of the parsed input. This can either be used to perform a dice roll or re-construct the original input. The `rollParsed` method takes this parsed result as an input, performs the roll and returns the same output as from the [`roll`](#generate-an-object-representing-the-dice-roll) method.
-
 
 ```javascript
 //	Rolls 2 d20 dice and keeps the value of the highest
@@ -217,58 +217,70 @@ The object returned by a roll result is made up of the following types.
 The base class for all die rolls, extended based upon the type property.
 
 | Property | Type                    | Description                                                         |
-|----------|-------------------------|---------------------------------------------------------------------|
-| success  | boolean                 | Was the roll a success, for target number rolls. Example: `3d6 > 3` |
+| -------- | ----------------------- | ------------------------------------------------------------------- |
+| success  | `boolean`               | Was the roll a success, for target number rolls. Example: `3d6 > 3` |
 | type     | [`RollType`](#RollType) | The type of roll that this object represents.                       |
-| valid    | boolean                 | Is the roll still valid, and included in calculations.              |
-| value    | number                  | The rolled or calculated value of this roll.                        |
-| label    | string                  | The display label for this roll. This property is optional.         |
-| order    | number                  | A property used to maintain ordering of dice rolls within groups.   |
+| valid    | `boolean`               | Is the roll still valid, and included in calculations.              |
+| value    | `number`                | The rolled or calculated value of this roll.                        |
+| label    | `string`                | The display label for this roll. This property is optional.         |
+| order    | `number`                | A property used to maintain ordering of dice rolls within groups.   |
 
 #### `RollType`
 
 An enum of the valid types of roll. The possible values are:
-- `"number"`
-- [`"diceexpressionroll"`](#DiceExpressionRoll)
-- [`"expressionroll"`](#ExpressionRoll)
-- [`"grouproll"`](#GroupRoll)
-- `"fate"`
-- [`"die"`](#DiceRollResult)
-- [`"roll"`](#DieRoll)
-- [`"fateroll"`](#FateDieRoll)
+
+-   `"number"`
+-   [`"diceexpressionroll"`](#DiceExpressionRoll)
+-   [`"expressionroll"`](#ExpressionRoll)
+-   [`"mathfunction"`](#MathFunctionRoll)
+-   [`"grouproll"`](#GroupRoll)
+-   `"fate"`
+-   [`"die"`](#DiceRollResult)
+-   [`"roll"`](#DieRoll)
+-   [`"fateroll"`](#FateDieRoll)
 
 #### `GroupedRoll`
 
 An intermediate interface extended for groups of dice. This interface extends [`RollBase`](#RollBase).
 
-| Property | Type                      | Description                               |
-|----------|---------------------------|-------------------------------------------|
-| dice     | [`RollBase`](#RollBase)[] | The rolls included as part of this group. |
+| Property | Type                               | Description                               |
+| -------- | ---------------------------------- | ----------------------------------------- |
+| dice     | `Array<`[`RollBase`](#RollBase)`>` | The rolls included as part of this group. |
 
 #### `DiceExpressionRoll`
 
 A representation of a dice expression e.g. '2d20 + 6d6'. This interface extends [`GroupedRoll`](#GroupedRoll).
 
 | Property | Type                   | Description                                   |
-|----------|------------------------|-----------------------------------------------|
+| -------- | ---------------------- | --------------------------------------------- |
 | type     | `"diceexpressionroll"` | The type of roll that this object represents. |
-| ops      | string[]               | The operations to perform on the rolls.       |
+| ops      | `Array<"+" | "-">`     | The operations to perform on the rolls.       |
 
 #### `ExpressionRoll`
 
-A representation of a mathematic expression e.g. '20 * 17'. This interface extends [`GroupedRoll`](#GroupedRoll).
+A representation of a mathematic expression e.g. '20 \* 17'. This interface extends [`GroupedRoll`](#GroupedRoll).
 
-| Property | Type               | Description                                   |
-|----------|--------------------|-----------------------------------------------|
-| type     | `"expressionroll"` | The type of roll that this object represents. |
-| ops      | string[]           | The operations to perform on the rolls.       |
+| Property | Type                                        | Description                                   |
+| -------- | ------------------------------------------- | --------------------------------------------- |
+| type     | `"expressionroll"`                          | The type of roll that this object represents. |
+| ops      | `Array<"+" | "-" | "*" | "/" | "%" | "**">` | The operations to perform on the rolls.       |
+
+#### `MathFunctionRoll`
+
+A representation of a mathematic function e.g. 'floor(20 / 17)'. This interface extends [`RollBase`](#RollBase).
+
+| Property | Type                                 | Description                                       |
+| -------- | ------------------------------------ | ------------------------------------------------- |
+| type     | `"expressionfunc"`                   | The type of roll that this object represents.     |
+| op       | `"floor" | "ceil" | "round" | "abs"` | The operations to perform on the rolls.           |
+| expr     | [`RollBase`](#RollBase)              | The expression that the function is applied upon. |
 
 #### `GroupRoll`
 
 A representation of a group of rolls e.g. {4d6,3d6}. This interface extends [`GroupedRoll`](#GroupedRoll).
 
 | Property | Type          | Description                                   |
-|----------|---------------|-----------------------------------------------|
+| -------- | ------------- | --------------------------------------------- |
 | type     | `"grouproll"` | The type of roll that this object represents. |
 
 #### `DiceRollResult`
@@ -276,105 +288,108 @@ A representation of a group of rolls e.g. {4d6,3d6}. This interface extends [`Gr
 The rolled result of a group of dice e.g. '6d20'. This interface extends [`RollBase`](#RollBase).
 
 | Property | Type                            | Description                                   |
-|----------|---------------------------------|-----------------------------------------------|
+| -------- | ------------------------------- | --------------------------------------------- |
 | die      | [`RollBase`](#RollBase)         | The die this result represents.               |
 | type     | `"die"`                         | The type of roll that this object represents. |
 | rolls    | [`DieRollBase`](#DieRollBase)[] | Each roll of the die.                         |
 | count    | [`RollBase`](#RollBase)         | The number of rolls of the die.               |
-| matched  | boolean                         | Whether this is a match result.               |
+| matched  | `boolean`                       | Whether this is a match result.               |
 
 #### `DieRollBase`
 
 An intermediate interface extended for individual die rolls (see below). This interface extends [`RollBase`](#RollBase).
 
-| Property | Type    | Description                   |
-|----------|---------|-------------------------------|
-| roll     | number  | The rolled result of the die. |
-| matched  | boolean | Whether this roll is a match. |
+| Property | Type      | Description                   |
+| -------- | --------- | ----------------------------- |
+| roll     | `number`  | The rolled result of the die. |
+| matched  | `boolean` | Whether this roll is a match. |
 
 #### `DieRoll`
 
 A roll on a regular die e.g. 'd20'. This interface extends [`DieRollBase`](#DieRollBase).
 
-| Property | Type                               | Description                                                    |
-|----------|------------------------------------|----------------------------------------------------------------|
-| die      | number                             | The die number to be rolled.                                   |
-| type     | `"roll"`                           | The type of roll that this object represents.                  |
-| critical | `"success"`, `"failure"` or `null` | If this role is a critical success or failure (for rendering). |
+| Property | Type                           | Description                                                    |
+| -------- | ------------------------------ | -------------------------------------------------------------- |
+| die      | `number`                       | The die number to be rolled.                                   |
+| type     | `"roll"`                       | The type of roll that this object represents.                  |
+| critical | `"success" | "failure" | null` | If this role is a critical success or failure (for rendering). |
 
 #### `FateDieRoll`
 
 A roll on a fate die e.g. 'dF'. This interface extends [`DieRollBase`](#DieRollBase).
 
 | Property | Type         | Description                                   |
-|----------|--------------|-----------------------------------------------|
+| -------- | ------------ | --------------------------------------------- |
 | type     | `"fateroll"` | The type of roll that this object represents. |
 
-###	Parsed Roll Output
+### Parsed Roll Output
 
 The following interfaces are exposed by the library as a reresentation of the parsed input string. The response from the `parse` method is a `RootType` object and could be any of the interfaces that extend it.
 
 #### `ParsedObjectType`
 
 An enum of the valid types of roll. The possible values are:
-- [`"number"`](#NumberType)
-- [`"inline"`](#InlineExpression)
-- [`"success"`](#SuccessFailureCritModType)
-- [`"failure"`](#SuccessFailureCritModType)
-- [`"crit"`](#SuccessFailureCritModType)
-- [`"critfail"`](#SuccessFailureCritModType)
-- [`"match"`](#MatchModType)
-- [`"keep"`](#KeepDropModType)
-- [`"drop"`](#KeepDropModType)
-- [`"group"`](#GroupedRoll)
-- [`"diceExpression"`](#RollExpressionType)
-- [`"sort"`](#SortRollType)
-- [`"explode"`](#ReRollMod)
-- [`"compound"`](#ReRollMod)
-- [`"penetrate"`](#ReRollMod)
-- [`"reroll"`](#ReRollMod)
-- [`"rerollOnce"`](#ReRollMod)
-- [`"target"`](#TargetMod)
-- [`"die"`](#DiceRoll)
-- [`"fate"`](#FateExpr)
-- [`"expression"`](#MathExpression)
-- [`"math"`](#MathType)
+
+-   [`"number"`](#NumberType)
+-   [`"inline"`](#InlineExpression)
+-   [`"success"`](#SuccessFailureCritModType)
+-   [`"failure"`](#SuccessFailureCritModType)
+-   [`"crit"`](#SuccessFailureCritModType)
+-   [`"critfail"`](#SuccessFailureCritModType)
+-   [`"match"`](#MatchModType)
+-   [`"keep"`](#KeepDropModType)
+-   [`"drop"`](#KeepDropModType)
+-   [`"group"`](#GroupedRoll)
+-   [`"diceExpression"`](#RollExpressionType)
+-   [`"sort"`](#SortRollType)
+-   [`"explode"`](#ReRollMod)
+-   [`"compound"`](#ReRollMod)
+-   [`"penetrate"`](#ReRollMod)
+-   [`"reroll"`](#ReRollMod)
+-   [`"rerollOnce"`](#ReRollMod)
+-   [`"target"`](#TargetMod)
+-   [`"die"`](#DiceRoll)
+-   [`"fate"`](#FateExpr)
+-   [`"expression"`](#MathExpression)
+-   [`"math"`](#MathType)
+-   [`"mathfunction"`](#MathFunctionExpression)
 
 #### `ParsedType`
 
 This is the base interface for all parsed types.
 
-| Property | Type   | Description                                     |
-|----------|--------|-------------------------------------------------|
-| type     | string | The type of parsed item this object represents. |
+| Property | Type     | Description                                     |
+| -------- | -------- | ----------------------------------------------- |
+| type     | `string` | The type of parsed item this object represents. |
 
 #### `RootType`
 
 This is the base interface for a subset of parsed types, only those that can be the root type. This object extends the [`ParsedType`](#ParsedType) interface.
 
-| Property | Type    | Description                                                       |
-|----------|---------|-------------------------------------------------------------------|
-| label?   | string  | The text label attached to this roll. This property is optional.  |
-| root     | boolean | A boolean flag to indicate if this is the root of the parse tree. |
+| Property | Type      | Description                                                       |
+| -------- | --------- | ----------------------------------------------------------------- |
+| label?   | `string`  | The text label attached to this roll. This property is optional.  |
+| root     | `boolean` | A boolean flag to indicate if this is the root of the parse tree. |
 
 #### `NumberType`
 
 This object represents a single number in the input. This object extends the [`RootType`](#RootType) interface.
 
 | Property | Type       | Description                                     |
-|----------|------------|-------------------------------------------------|
+| -------- | ---------- | ----------------------------------------------- |
 | type     | `"number"` | The type of parsed item this object represents. |
-| value    | number     | The value of the number.                        |
+| value    | `number`   | The value of the number.                        |
 
 #### `InlineExpression`
 
 This object represents an inline dice expression within a string, wrapped in double square brackets. This object extends the [`RootType`](#RootType) interface.
 
 **Example**
+
 > `I want to roll [[2d20]] dice`
 
 | Property | Type                        | Description                                          |
-|----------|-----------------------------|------------------------------------------------------|
+| -------- | --------------------------- | ---------------------------------------------------- |
 | type     | `"inline"`                  | The type of parsed item this object represents.      |
 | expr     | [`Expression`](#Expression) | The expression that was parsed as the inline string. |
 
@@ -382,27 +397,29 @@ This object represents an inline dice expression within a string, wrapped in dou
 
 A combined type representing any valid roll. This is a combination of the following types:
 
-- [`GroupedRoll`](#GroupedRoll)
-- [`FullRoll`](#FullRoll)
-- [`NumberType`](#NumberType)
+-   [`GroupedRoll`](#GroupedRoll)
+-   [`FullRoll`](#FullRoll)
+-   [`NumberType`](#NumberType)
 
 #### `ModGroupedRoll`
 
 This object represents a grouped roll with an optional modifier. This object extends the [`RootType`](#RootType) interface.
 
 **Example**
+
 > `{4d6+3d8}kh1`
 
-| Property | Type                                                                                                  | Description                                      |
-|----------|-------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| mods     | An array of: [`KeepDropModType`](#KeepDropModType), [`SuccessFailureModType`](#SuccessFailureModType) | The modifiers to be applied to the grouped roll. |
+| Property | Type                                                                                                   | Description                                      |
+| -------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| mods     | `Array<`[`KeepDropModType`](#KeepDropModType)` | `[`SuccessFailureModType`](#SuccessFailureModType)`>` | The modifiers to be applied to the grouped roll. |
 
 #### `ConditionCheck`
 
 The available values for target condition checking:
-- `">"`
-- `"<"`
-- `"="`
+
+-   `">"`
+-   `"<"`
+-   `"="`
 
 #### `SuccessFailureCritModType`
 
@@ -411,54 +428,60 @@ A `"success"` or `"failure"` modifier converts the result into a success type re
 A `"crit"` or `"critfail"` modifier tests the roll for whether or not the roll should be displayed as a critical success or critical failure.
 
 **Example**
+
 > Success: `3d6>3`
 > Failure: `3d6f<3`
 
-| Property | Type                                               | Description                                                     |
-|----------|----------------------------------------------------|-----------------------------------------------------------------|
-| type     | `"success"`, `"failure"`, `"crit"` or `"critfail"` | The type of parsed item this object represents.                 |
-| mod      | [`ConditionCheck`](#ConditionCheck)                | The check type to use for the condition.                        |
-| expr     | [`RollExpression`](#RollExpression)                | An expression representing the success condition.               |
+| Property | Type                                          | Description                                       |
+| -------- | --------------------------------------------- | ------------------------------------------------- |
+| type     | `"success" | "failure" | "crit" | "critfail"` | The type of parsed item this object represents.   |
+| mod      | [`ConditionCheck`](#ConditionCheck)           | The check type to use for the condition.          |
+| expr     | [`RollExpression`](#RollExpression)           | An expression representing the success condition. |
 
 #### `SuccessFailureModType`
 
 Equivalent to the [`SuccessFailureCritModType`](#SuccessFailureCritModType) but only supporting "success" and "failure" modifiers. This object extends the [`SuccessFailureCritModType`](#SuccessFailureCritModType) interface.
 
 **Example**
+
 > Success: `3d6>3`
 > Failure: `3d6f<3`
 
-| Property | Type                                | Description                                                     |
-|----------|-------------------------------------|-----------------------------------------------------------------|
-| type     | `"success"` or `"failure"`          | The type of parsed item this object represents.                 |
-| mod      | [`ConditionCheck`](#ConditionCheck) | The check type to use for the condition.                        |
-| expr     | [`RollExpression`](#RollExpression) | An expression representing the success condition.               |
+| Property | Type                                | Description                                       |
+| -------- | ----------------------------------- | ------------------------------------------------- |
+| type     | `"success" | "failure"`             | The type of parsed item this object represents.   |
+| mod      | [`ConditionCheck`](#ConditionCheck) | The check type to use for the condition.          |
+| expr     | [`RollExpression`](#RollExpression) | An expression representing the success condition. |
 
 #### `MatchModType`
 
 An object representing a match type modifier, used to modify the display of dice output in roll20. This object extends the [`ParsedType`](#ParsedType) interface.
 
 **Example**
+
 > `2d6m`
 
 When used with the `mt` extension, will return the number of matches found.
 
 **Example**
+
 > `20d6mt`
 
 Additional arguments can be specified that increase the required number of matches or to add a constraint to matches.
 
 **Example**
+
 > `20d6mt3 counts matches of 3 items`
 
 **Example**
+
 > `20d6m>3 Only counts matches where the rolled value is > 3`
 
 | Property | Type           | Description                                                                                            |
-|----------|----------------|--------------------------------------------------------------------------------------------------------|
+| -------- | -------------- | ------------------------------------------------------------------------------------------------------ |
 | type     | `"match"`      | The type of parsed item this object represents.                                                        |
 | min      | NumberType     | The minimum number of matches to accept. This property defaults to 2 as a [`NumberType`](#NumberType). |
-| count    | boolean        | Whether or not to count the matches.                                                                   |
+| count    | `boolean`      | Whether or not to count the matches.                                                                   |
 | mod?     | ConditionCheck | The check type to use for the match condition, if specified. This field is optional.                   |
 | expr?    | RollExpression | An expression representing the match condition, if specified. This field is optional.                  |
 
@@ -467,13 +490,14 @@ Additional arguments can be specified that increase the required number of match
 An object representing a keep or drop modifier, specifying a number of dice rolls to keep or drop, either the highest or lowest rolls. This object extends the [`ParsedType`](#ParsedType) interface.
 
 **Example**
+
 > Keep: `2d20kh1`
 > Drop: `2d20dl1`
 
 | Property | Type                                | Description                                                                                                                               |
-|----------|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| type     | `"keep"` or `"drop"`                | The type of parsed item this object represents.                                                                                           |
-| highlow  | `"h"`, `"l"` or null                | Whether to keep/drop the highest or lowest roll.                                                                                          |
+| -------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| type     | `"keep" | "drop"`                   | The type of parsed item this object represents.                                                                                           |
+| highlow  | `"h" | "l" | null`                  | Whether to keep/drop the highest or lowest roll.                                                                                          |
 | expr     | [`RollExpression`](#RollExpression) | An expression representing the number of rolls to keep/drop. This property defaults to 1 as a [`NumberType`](#NumberType). Example: `2d6` |
 
 #### `GroupedRoll`
@@ -481,87 +505,95 @@ An object representing a keep or drop modifier, specifying a number of dice roll
 This object represents a group of rolls combined, with optional modifiers. This object extends the [`ModGroupedRoll`](#ModGroupedRoll) interface.
 
 **Example**
+
 > `{2d6,3d6}`
 
-| Property | Type                                  | Description                                     |
-|----------|---------------------------------------|-------------------------------------------------|
-| type     | `"group"`                             | The type of parsed item this object represents. |
-| rolls    | [`RollExpression`](#RollExpression)[] | The group of rolls included in this group.      |
+| Property | Type                                           | Description                                     |
+| -------- | ---------------------------------------------- | ----------------------------------------------- |
+| type     | `"group"`                                      | The type of parsed item this object represents. |
+| rolls    | `Array<`[`RollExpression`](#RollExpression)`>` | The group of rolls included in this group.      |
 
 #### `RollExpressionType`
 
 An object representing a roll expression including complex rolls and groups, only allows addition operations. This object extends the [`RootType`](#RootType) interface.
 
 **Example**
+
 > `{2d6,3d6}kh1 + {3d6 + 2d6}kh2`
 
-| Property | Type                                    | Description                                                |
-|----------|-----------------------------------------|------------------------------------------------------------|
-| head     | [`RollOrExpression`](#RollOrExpression) | The initial roll or expression for the roll expression.    |
-| type     | `"diceExpression"`                      | The type of parsed item this object represents.            |
-| ops      | [`MathType`](#MathType)[]               | The operations to apply to the initial roll or expression. |
+| Property | Type                                                                                     | Description                                                |
+| -------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| head     | [`RollOrExpression`](#RollOrExpression)                                                  | The initial roll or expression for the roll expression.    |
+| type     | `"diceExpression"`                                                                       | The type of parsed item this object represents.            |
+| ops      | `Array<`[`MathType`](#MathType)`<`[`RollOrExpression`](#RollOrExpression)`, "+" | "-">>` | The operations to apply to the initial roll or expression. |
 
 #### `RollExpression`
 
 A helper type combination of a complex roll expression, a roll, or a math expression. Represents the following types:
-- [`RollExpressionType`](#RollExpressionType)
-- [`RollOrExpression`](#RollOrExpression)
+
+-   [`RollExpressionType`](#RollExpressionType)
+-   [`RollOrExpression`](#RollOrExpression)
 
 #### `RollOrExpression`
 
 A helper type combination of a roll, or a math expression. Represents the following types:
-- [`FullRoll`](#FullRoll)
-- [`Expression`](#Expression)
+
+-   [`FullRoll`](#FullRoll)
+-   [`Expression`](#Expression)
 
 #### `FullRoll`
 
 An object representing a roll including the dice roll, and any modifiers. This object extends the [`DiceRoll`](#DiceRoll) interface.
 
 **Example**
+
 > `2d6kh1`
 
-| Property | Type                                                                            | Description                                                             |
-|----------|---------------------------------------------------------------------------------|-------------------------------------------------------------------------|
-| mods?    | An array of: [`ReRollMod`](#ReRollMod) or [`KeepDropModType`](#KeepDropModType) | Any modifiers attached to the roll. This property is optional.          |
-| targets? | An array of: [`SuccessFailureCritModType`](#SuccessFailureCritModType)          | Any success or failure targets for the roll. This property is optional. |
-| match?   | [`MatchModTyp`](#MatchModTyp)                                                   | Any match modifiers for the roll. This property is optional.            |
-| sort?    | [`SortRollType`](#SortRollType)                                                 | Any sort operations to apply to the roll. This property is optional.    |
+| Property | Type                                                                           | Description                                                             |
+| -------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| mods?    | `Array<`[`ReRollMod`](#ReRollMod)` | `[`KeepDropModType`](#KeepDropModType)`>` | Any modifiers attached to the roll. This property is optional.          |
+| targets? | `Array<`[`SuccessFailureCritModType`](#SuccessFailureCritModType)`>`           | Any success or failure targets for the roll. This property is optional. |
+| match?   | [`MatchModTyp`](#MatchModTyp)                                                  | Any match modifiers for the roll. This property is optional.            |
+| sort?    | [`SortRollType`](#SortRollType)                                                | Any sort operations to apply to the roll. This property is optional.    |
 
 #### `SortRollType`
 
 A sort operation to apply to a roll. This object extends the [`ParsedType`](#ParsedType) interface.
 
 **Example**
+
 > `10d6sa`
 
-| Property | Type     | Description                                     |
-|----------|----------|-------------------------------------------------|
-| type     | `"sort"` | The type of parsed item this object represents. |
-| asc      | boolean  | Whether to sort ascending or descending.        |
+| Property | Type      | Description                                     |
+| -------- | --------- | ----------------------------------------------- |
+| type     | `"sort"`  | The type of parsed item this object represents. |
+| asc      | `boolean` | Whether to sort ascending or descending.        |
 
 #### `ReRollMod`
 
 An object representing a re-roll operation to apply to a roll. Can be one of the following types:
-- `"explode"`: re-rolls any dice that meet the target, continuing if the new roll matches
-- `"compound"`: re-rolls any dice that meet the target, continuing if the new roll matches and adding the results into a single roll
-- `"penetrate"`: re-rolls any dice that meet the target subtracting 1 from the new value, continuing if the new roll matches
-- `"reroll"`: re-rolls a die as long as it meets the target, keeping the final roll
-- `"rerollOnce"`: re-rolls a die once if it meets the target, keeping the new roll
+
+-   `"explode"`: re-rolls any dice that meet the target, continuing if the new roll matches
+-   `"compound"`: re-rolls any dice that meet the target, continuing if the new roll matches and adding the results into a single roll
+-   `"penetrate"`: re-rolls any dice that meet the target subtracting 1 from the new value, continuing if the new roll matches
+-   `"reroll"`: re-rolls a die as long as it meets the target, keeping the final roll
+-   `"rerollOnce"`: re-rolls a die once if it meets the target, keeping the new roll
 
 **Example**
+
 > `2d6!`
 
-| Property | Type                                                           | Description                                            |
-|----------|----------------------------------------------------------------|--------------------------------------------------------|
-| type     | `"explode"`, `compound`, `penetrate`, `reroll` or `rerollOnce` | The type of parsed item this object represents.        |
-| target   | [`TargetMod`](#TargetMod)                                      | The target modifier to compare the roll value against. |
+| Property | Type                                                             | Description                                            |
+| -------- | ---------------------------------------------------------------- | ------------------------------------------------------ |
+| type     | `"explode" | "compound" | "penetrate" | "reroll" | "rerollOnce"` | The type of parsed item this object represents.        |
+| target   | [`TargetMod`](#TargetMod)                                        | The target modifier to compare the roll value against. |
 
 #### `TargetMod`
 
 An object represting a target modifier to apply to a roll. This object extends the [`ParsedType`](#ParsedType) interface.
 
 | Property | Type                                | Description                                            |
-|----------|-------------------------------------|--------------------------------------------------------|
+| -------- | ----------------------------------- | ------------------------------------------------------ |
 | type     | `"target"`                          | The type of parsed item this object represents.        |
 | mod      | [`ConditionCheck`](#ConditionCheck) | The check type to use for the condition.               |
 | value    | [`RollExpr`](#RollExpr)             | An expression representing the target condition value. |
@@ -571,60 +603,80 @@ An object represting a target modifier to apply to a roll. This object extends t
 The representation of a die roll. This object extends the [`RootType`](#RootType) interface.
 
 **Example**
+
 > `2d6`
 
-| Property | Type                                               | Description                                                                              |
-|----------|----------------------------------------------------|------------------------------------------------------------------------------------------|
-| die      | [`RollExpr`](#RollExpr) or [`FateExpr`](#FateExpr) | The die value to roll against, can be a fate die, a number or a complex roll expression. |
-| count    | [`RollExpr`](#RollExpr)                            | The number of time to roll this die.                                                     |
-| type     | `"die"`                                            | The type of parsed item this object represents.                                          |
+| Property | Type                                                | Description                                                                              |
+| -------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| die      | [`RollExpr`](#RollExpr)` | `[`FateExpr`](#FateExpr) | The die value to roll against, can be a fate die, a number or a complex roll expression. |
+| count    | [`RollExpr`](#RollExpr)                             | The number of time to roll this die.                                                     |
+| type     | `"die"`                                             | The type of parsed item this object represents.                                          |
 
 #### `FateExpr`
 
 The representation of a fate die roll. This object extends the [`ParsedType`](#ParsedType) interface.
 
 **Example**
+
 > `2dF`
 
-| Property | Type     | Description                                      |
-|----------|----------|-------------------------------------------------|
+| Property | Type     | Description                                     |
+| -------- | -------- | ----------------------------------------------- |
 | type     | `"fate"` | The type of parsed item this object represents. |
 
 #### `RollExpr`
 
 A helper type combination of a number or value that is not an expression. Represents the following types:
-- [`MathExpression`](#MathExpression)
-- [`NumberType`](#NumberType)
+
+-   [`MathExpression`](#MathExpression)
+-   [`NumberType`](#NumberType)
 
 #### `Expression`
 
 A helper type combination of expression types. Represents the following types:
-- [`InlineExpression`](#InlineExpression)
-- [`MathExpression`](#MathExpression)
+
+-   [`InlineExpression`](#InlineExpression)
+-   [`MathExpression`](#MathExpression)
 
 #### `MathExpression`
 
 A math type expression between two or more dice rolls. This object extends the [`RootType`](#RootType) interface.
 
 **Example**
+
 > `2d6 + 3d6 * 4d6`
 
-| Property | Type                                             | Description                                     |
-|----------|--------------------------------------------------|-------------------------------------------------|
-| head     | [`AnyRoll`](#AnyRoll)                            | The initial roll to perform operations against. |
-| type     | `"expression"`                                   | The type of parsed item this object represents. |
-| ops      | [`MathType`](#MathType)<[`AnyRoll`](#AnyRoll)>[] | The operations to apply to the initial roll.    |
-
+| Property | Type                                                        | Description                                     |
+| -------- | ----------------------------------------------------------- | ----------------------------------------------- |
+| head     | [`AnyRoll`](#AnyRoll)                                       | The initial roll to perform operations against. |
+| type     | `"expression"`                                              | The type of parsed item this object represents. |
+| ops      | `Array<`[`MathType`](#MathType)`<`[`AnyRoll`](#AnyRoll)`>>` | The operations to apply to the initial roll.    |
 
 #### `MathType`
+
 An object representating an roll math operation to be applied and the value to apply it to. This object extends the [`ParsedType`](#ParsedType) interface.
-The interface for this object takes a templated type `TailType` which specifies the type of the second value used in the operation. This defaults to a [`RollOrExpression`](#RollOrExpression) type.
+The interface for this object takes a templated type `TailType` which specifies the type of the second value used in the operation.
+There is a second templated type `OpValues` which specifies the type of operations that can be used. This defaults to `Array<"+" | "-" | "*" | "/" | "%" | "**">`.
 
 **Example**
+
 > `+ 3d6 (as part of 2d6 + 3d6)`
 
-| Property | Type                         | Description                                     |
-|----------|------------------------------|-------------------------------------------------|
-| type     | `"math"`                     | The type of parsed item this object represents. |
-| op       | `"+"`, `"-"`, `"*"` or `"/"` | The math operation to perform.                  |
-| tail     | TailType                     | The second value to use in the operation.       |
+| Property | Type       | Description                                     |
+| -------- | ---------- | ----------------------------------------------- |
+| type     | `"math"`   | The type of parsed item this object represents. |
+| op       | `OpValues` | The math operation to perform.                  |
+| tail     | `TailType` | The second value to use in the operation.       |
+
+#### `MathFunctionExpression`
+
+An object representing a math function to be applied and the expression to apply it to. This object extends the [`RootType`](#RootType) interface.
+
+**Example**
+> `floor(3d6 / 2d4)`
+
+| Property | Type                                 | Description                                     |
+| -------- | ------------------------------------ | ----------------------------------------------- |
+| type     | `"mathfunction"`                     | The type of parsed item this object represents. |
+| op       | `"floor" | "ceil" | "round" | "abs"` | The function to be applied.                     |
+| expr     | [`AnyRoll`](#AnyRoll)                | The expression to apply the function on.        |

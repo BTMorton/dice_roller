@@ -1,15 +1,16 @@
+// tslint:disable-next-line: no-var-requires
 const parser = require("./diceroll.js");
 import {
 	RootType, DiceRoll, NumberType, InlineExpression, RollExpressionType, MathType, GroupedRoll, SortRollType, SuccessFailureCritModType,
-	ReRollMod, FullRoll, ParsedType, MathExpression, KeepDropModType, SuccessFailureModType
+	ReRollMod, FullRoll, ParsedType, MathExpression, KeepDropModType, SuccessFailureModType, MathFunctionExpression
 } from "./parsedRollTypes";
 import {
-	RollBase, DiceExpressionRoll, GroupRoll, DiceRollResult, DieRollBase, ExpressionRoll, DieRoll, FateDieRoll, GroupedRollBase
+	RollBase, DiceExpressionRoll, GroupRoll, DiceRollResult, DieRollBase, ExpressionRoll, DieRoll, FateDieRoll, GroupedRollBase, MathFunctionRoll
 } from "./rollTypes";
 
 export class DiceRoller {
 	public randFunction: () => number = Math.random;
-	public maxRollCount: number = 1000;
+	public maxRollCount = 1000;
 
 	/**
 	 * The DiceRoller class that performs parsing and rolls of {@link https://wiki.roll20.net/Dice_Reference roll20 format} input strings
@@ -77,6 +78,9 @@ export class DiceRoller {
 			case "expression":
 				response = this.rollExpression(input as MathExpression);
 				break;
+			case "mathfunction":
+				response = this.rollFunction(input as MathFunctionExpression);
+				break;
 			case "inline":
 				response = this.rollType((input as InlineExpression).expr);
 				break;
@@ -102,10 +106,10 @@ export class DiceRoller {
 	private rollDiceExpr(input: RollExpressionType): DiceExpressionRoll {
 		const headRoll = this.rollType(input.head);
 		const rolls = [headRoll];
-		const ops: string[] = [];
+		const ops: ("+" | "-")[] = [];
 
 		const value = input.ops
-			.reduce((headValue, math: MathType, order: number) => {
+			.reduce((headValue, math, order: number) => {
 				const tailRoll = this.rollType(math.tail);
 				tailRoll.order = order;
 
@@ -167,7 +171,7 @@ export class DiceRoller {
 						.filter((die) => die.type !== "number")
 						.reduce((arr: RollBase[], die) => [
 							...arr,
-							...die.type == "die"
+							...die.type === "die"
 								? (die as DiceRollResult).rolls
 								: (die as GroupedRollBase).dice,
 						], []);
@@ -214,12 +218,12 @@ export class DiceRoller {
 
 		if (input.mods) {
 			rolls = input.mods
-				.reduce((rolls, mod) => this.applyMod(rolls, mod), rolls);
+				.reduce((moddedRolls, mod) => this.applyMod(moddedRolls, mod), rolls);
 		}
 
 		if (input.targets) {
 			rolls = input.targets
-				.reduce((rolls, target) => this.applyMod(rolls, target), rolls)
+				.reduce((moddedRolls, target) => this.applyMod(moddedRolls, target), rolls)
 				.map((roll) => {
 					if (!roll.success) {
 						roll.value = 0;
@@ -238,7 +242,7 @@ export class DiceRoller {
 				new Map());
 
 			const matches = new Set(Array.from(counts.entries())
-				.filter(([_, count]) => count >= match.min.value)
+				.filter(([_, matchedCount]) => matchedCount >= match.min.value)
 				.filter(([val]) => !(match.mod
 					&& match.expr)
 					|| this.successTest(match.mod, this.rollType(match.expr).value, val))
@@ -258,9 +262,9 @@ export class DiceRoller {
 		}
 
 		return {
-			count: count,
+			count,
 			die,
-			rolls: rolls,
+			rolls,
 			success: false,
 			type: "die",
 			valid: true,
@@ -273,10 +277,10 @@ export class DiceRoller {
 	private rollExpression(input: RollExpressionType | MathExpression): ExpressionRoll {
 		const headRoll = this.rollType(input.head);
 		const rolls = [headRoll];
-		const ops: string[] = [];
+		const ops: ("+" | "-" | "*" | "/" | "%" | "**")[] = [];
 
 		const value = (input.ops as MathType<any>[])
-			.reduce((headValue: number, math: MathType) => {
+			.reduce((headValue: number, math) => {
 				const tailRoll = this.rollType(math.tail);
 				rolls.push(tailRoll);
 				ops.push(math.op);
@@ -290,6 +294,10 @@ export class DiceRoller {
 						return headValue * tailRoll.value;
 					case "/":
 						return headValue / tailRoll.value;
+					case "%":
+						return headValue % tailRoll.value;
+					case "**":
+						return headValue ** tailRoll.value;
 					default:
 						return headValue;
 				}
@@ -300,6 +308,39 @@ export class DiceRoller {
 			ops,
 			success: false,
 			type: "expressionroll",
+			valid: true,
+			value,
+			order: 0,
+		}
+	}
+
+	private rollFunction(input: MathFunctionExpression): MathFunctionRoll {
+		const expr = this.rollType(input.expr);
+
+		let value: number;
+		switch (input.op) {
+			case "floor":
+				value = Math.floor(expr.value);
+				break;
+			case "ceil":
+				value = Math.ceil(expr.value);
+				break;
+			case "round":
+				value = Math.round(expr.value);
+				break;
+			case "abs":
+				value = Math.abs(expr.value);
+				break;
+			default:
+				value = expr.value;
+				break;
+		}
+
+		return {
+			expr,
+			op: input.op,
+			success: false,
+			type: "mathfunction",
 			valid: true,
 			value,
 			order: 0,
@@ -456,19 +497,19 @@ export class DiceRoller {
 		const exprResult = this.rollType(mod.expr);
 
 		return (rolls: T[]) => {
-			if (rolls.length == 0) return rolls;
+			if (rolls.length === 0) return rolls;
 
 			rolls = rolls
-				.sort((a, b) => mod.highlow == "l"
+				.sort((a, b) => mod.highlow === "l"
 					? lookup(b) - lookup(a)
 					: lookup(a) - lookup(b))
 				.sort((a, b) => (a.valid ? 1 : 0) - (b.valid ? 1 : 0));
 
-			let toKeep = Math.max(Math.min(exprResult.value, rolls.length), 0);
+			const toKeep = Math.max(Math.min(exprResult.value, rolls.length), 0);
 			let dropped = 0;
 			let i = 0;
 
-			let toDrop = rolls.reduce((value, roll) => (roll.valid ? 1 : 0) + value, 0) - toKeep;
+			const toDrop = rolls.reduce((value, roll) => (roll.valid ? 1 : 0) + value, 0) - toKeep;
 
 			while (i < rolls.length && dropped < toDrop) {
 				if (rolls[i].valid) {
@@ -487,11 +528,11 @@ export class DiceRoller {
 		const exprResult = this.rollType(mod.expr);
 
 		return (rolls: T[]) => {
-			rolls = rolls.sort((a, b) => mod.highlow == "h"
+			rolls = rolls.sort((a, b) => mod.highlow === "h"
 				? lookup(b) - lookup(a)
 				: lookup(a) - lookup(b));
 
-			let toDrop = Math.max(Math.min(exprResult.value, rolls.length), 0);
+			const toDrop = Math.max(Math.min(exprResult.value, rolls.length), 0);
 			let dropped = 0;
 			let i = 0;
 
@@ -516,7 +557,7 @@ export class DiceRoller {
 		return (rolls: DieRollBase[]) => {
 			const targetMethod = targetValue
 				? (roll: DieRollBase) => this.successTest(mod.target.mod, targetValue.value, roll.roll)
-				: (roll: DieRollBase) => this.successTest("=", roll.type == "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
+				: (roll: DieRollBase) => this.successTest("=", roll.type === "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
 
 			if (
 				rolls[0].type === "roll"
@@ -550,7 +591,7 @@ export class DiceRoller {
 		return (rolls: DieRollBase[]) => {
 			const targetMethod = targetValue
 				? (roll: DieRollBase) => this.successTest(mod.target.mod, targetValue.value, roll.roll)
-				: (roll: DieRollBase) => this.successTest("=", roll.type == "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
+				: (roll: DieRollBase) => this.successTest("=", roll.type === "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
 
 			if (
 				rolls[0].type === "roll"
@@ -587,7 +628,7 @@ export class DiceRoller {
 		return (rolls: DieRollBase[]) => {
 			const targetMethod = targetValue
 				? (roll: DieRollBase) => this.successTest(mod.target.mod, targetValue.value, roll.roll)
-				: (roll: DieRollBase) => this.successTest("=", roll.type == "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
+				: (roll: DieRollBase) => this.successTest("=", roll.type === "fateroll" ? 1 : (roll as DieRoll).die, roll.roll);
 
 			if (targetValue
 				&& rolls[0].type === "roll"
@@ -667,6 +708,7 @@ export class DiceRoller {
 				return roll <= target;
 			case "=":
 			default:
+				// tslint:disable-next-line: triple-equals
 				return roll == target;
 		}
 	}
