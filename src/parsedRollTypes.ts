@@ -1,5 +1,5 @@
 /** The type of the parsed object  */
-type ParsedObjectType = "number"
+export type ParsedObjectType = "number"
 	| "inline"
 	| "success"
 	| "failure"

@@ -1,2 +1,4 @@
 export * from "./diceRoller";
-export * from "./diceRollTypes";
+export * from "./parsedRollTypes";
+export * from "./rollTypes";
+export * from "./discordRollRenderer";
