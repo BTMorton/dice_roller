@@ -1,15 +1,19 @@
 {
     "compilerOptions": {
+		"baseUrl": "src",
+		"outDir": ".",
         "module": "commonjs",
-        "target": "es5",
-        "noImplicitAny": false,
-        "sourceMap": false
+        "target": "es2017",
+        "noImplicitAny": true,
+		"declaration": true,
+		"declarationDir": "./dist",
+		"strict": true,
+		"sourceMap": true
     },
     "exclude": [
-        "node_modules"
-    ],
-    "files": [
-    	"roller.ts",
-    	"typings/index.d.ts"
-    ]
+		"node_modules"
+	],
+	"include": [
+		"src/**/*"
+	]
 }
