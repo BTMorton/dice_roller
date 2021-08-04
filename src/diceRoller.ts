@@ -607,13 +607,13 @@ export class DiceRoller {
 				let explodeCount = 0;
 
 				while (targetMethod(roll) && explodeCount++ < 1000) {
-					const newRoll = this.reRoll(rolls[i], ++i);
+					const newRoll = this.reRoll(roll,i+1);
 					rollValue += newRoll.roll;
 					roll = newRoll;
 				}
 
-				roll.value = rollValue;
-				roll.roll = rollValue;
+				rolls[i].value = rollValue;
+				rolls[i].roll = rollValue;
 			}
 
 			return rolls;

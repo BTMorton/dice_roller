@@ -63,3 +63,27 @@ testRolls.forEach(([roll, expectedValue]) => {
 		expect(roller.rollValue(roll)).toBe(expectedValue)
 	});
 });
+
+const testFixedRolls: [string, number, number[]][] = [
+	['1d6!!', 14, [.84, .84, .17]], // value = [6,6,2]
+	['4d6!!', 24, [.84, .67, .5, .17, .84, 0]] // value = [6,5,4,2,6,1]
+]
+
+let externalCount: number = 0
+let rollsAsFloats: Array<number> = []
+const fixedRoller = new dist.DiceRoller((rolls: Array<number> = rollsAsFloats)=>{
+	if(rolls.length > 0) {
+		return rolls[externalCount++]
+	} else {
+		console.warn("No results passed to the dice-roller-parser. Using fallback Math.random")
+		return Math.random()
+	}
+})
+
+testFixedRolls.forEach(([roll, expectedValue, values]) => {
+	test(roll, () => {
+		externalCount = 0
+		rollsAsFloats = values
+		expect(fixedRoller.rollValue(roll)).toBe(expectedValue)
+	});
+});
