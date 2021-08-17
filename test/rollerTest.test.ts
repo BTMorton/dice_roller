@@ -66,7 +66,8 @@ testRolls.forEach(([roll, expectedValue]) => {
 
 const testFixedRolls: [string, number, number[]][] = [
 	['1d6!!', 14, [.84, .84, .17]], // value = [6,6,2]
-	['4d6!!', 24, [.84, .67, .5, .17, .84, 0]] // value = [6,5,4,2,6,1]
+	['4d6!!', 24, [.84, .67, .5, .17, .84, 0]], // value = [6,5,4,2,6,1]
+	['4d6dl1', 15, [.84, .67, .5, .17]] // value = [6,5,4,2]
 ]
 
 let externalCount: number = 0

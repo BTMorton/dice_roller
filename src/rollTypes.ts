@@ -28,6 +28,8 @@ export interface RollBase {
 	label?: string;
 	/** A property used to maintain ordering of dice rolls within groups */
 	order: number;
+	/** Any special operations appied to this die */
+	operation?: string;
 }
 
 /** An intermediate interface extended for groups of dice */
