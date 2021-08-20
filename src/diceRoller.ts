@@ -514,6 +514,7 @@ export class DiceRoller {
 			while (i < rolls.length && dropped < toDrop) {
 				if (rolls[i].valid) {
 					rolls[i].valid = false;
+					rolls[i].drop = true
 					dropped++;
 				}
 
@@ -539,6 +540,7 @@ export class DiceRoller {
 			while (i < rolls.length && dropped < toDrop) {
 				if (rolls[i].valid) {
 					rolls[i].valid = false;
+					rolls[i].drop = true
 					dropped++;
 				}
 
@@ -573,6 +575,7 @@ export class DiceRoller {
 				let explodeCount = 0;
 
 				while (targetMethod(roll) && explodeCount++ < 1000) {
+					roll.explode = true
 					const newRoll = this.reRoll(roll, ++i);
 					rolls.splice(i, 0, newRoll);
 					roll = newRoll;
@@ -607,13 +610,14 @@ export class DiceRoller {
 				let explodeCount = 0;
 
 				while (targetMethod(roll) && explodeCount++ < 1000) {
-					const newRoll = this.reRoll(rolls[i], ++i);
+					roll.explode = true
+					const newRoll = this.reRoll(roll,i+1);
 					rollValue += newRoll.roll;
 					roll = newRoll;
 				}
 
-				roll.value = rollValue;
-				roll.roll = rollValue;
+				rolls[i].value = rollValue;
+				rolls[i].roll = rollValue;
 			}
 
 			return rolls;
@@ -644,6 +648,7 @@ export class DiceRoller {
 				let explodeCount = 0;
 
 				while (targetMethod(roll) && explodeCount++ < 1000) {
+					roll.explode = true
 					const newRoll = this.reRoll(roll, ++i);
 					newRoll.value -= 1;
 					newRoll.roll -= 1;
@@ -668,6 +673,7 @@ export class DiceRoller {
 
 			for (let i = 0; i < rolls.length; i++) {
 				while (targetMethod(rolls[i].roll)) {
+					rolls[i].reroll = true
 					rolls[i].valid = false;
 					const newRoll = this.reRoll(rolls[i], i + 1);
 					rolls.splice(++i, 0, newRoll);
@@ -690,6 +696,7 @@ export class DiceRoller {
 
 			for (let i = 0; i < rolls.length; i++) {
 				if (targetMethod(rolls[i].roll)) {
+					rolls[i].reroll = true
 					rolls[i].valid = false;
 					const newRoll = this.reRoll(rolls[i], i + 1);
 					rolls.splice(++i, 0, newRoll);
